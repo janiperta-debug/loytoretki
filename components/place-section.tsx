@@ -10,7 +10,7 @@ const categories = [
 
 export function PlaceSection() {
   return (
-    <section className="relative bg-secondary/50">
+    <section id="paikat" className="relative scroll-mt-20 bg-secondary/50">
       <div className="mx-auto grid max-w-6xl gap-14 px-5 py-24 sm:px-8 sm:py-32 md:grid-cols-2 md:items-center">
         <Reveal>
           <div>

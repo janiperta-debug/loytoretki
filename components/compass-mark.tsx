@@ -1,15 +1,17 @@
 type CompassMarkProps = {
   className?: string
+  "aria-hidden"?: boolean
 }
 
 /** Simple engraved compass-rose mark used as the Löytöretki logo glyph. */
-export function CompassMark({ className }: CompassMarkProps) {
+export function CompassMark({ className, "aria-hidden": ariaHidden }: CompassMarkProps) {
   return (
     <svg
       viewBox="0 0 100 100"
       className={className}
-      role="img"
-      aria-label="Löytöretki-kompassi"
+      role={ariaHidden ? undefined : "img"}
+      aria-label={ariaHidden ? undefined : "Löytöretki-kompassi"}
+      aria-hidden={ariaHidden}
       fill="none"
       stroke="currentColor"
     >
