@@ -10,7 +10,14 @@ const places = [
 
 export function DiscoverySection() {
   return (
-    <section className="relative bg-forest text-forest-foreground">
+    <section className="relative overflow-hidden bg-forest text-forest-foreground">
+      <img
+        src="/images/discovery-scene.jpg"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover object-center"
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-[oklch(0.4_0.055_152_/_0.94)] via-[oklch(0.35_0.05_152_/_0.92)] to-[oklch(0.27_0.045_152_/_0.96)]" />
       <div className="paper-grain absolute inset-0 opacity-40" />
       <div className="relative mx-auto grid max-w-6xl gap-14 px-5 py-24 sm:px-8 sm:py-32 md:grid-cols-2 md:items-center">
         <Reveal>

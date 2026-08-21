@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { Menu, X, ArrowRight } from 'lucide-react'
-import { CompassMark } from './compass-mark'
 
 const links = [
   { label: 'Mikä se on', href: '#mika' },
@@ -23,26 +22,19 @@ export function SiteNav() {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-500 ${
+      className={`fixed inset-x-0 top-0 z-50 bg-background/90 backdrop-blur-md transition-shadow duration-500 ${
         scrolled
-          ? 'bg-background/85 backdrop-blur-md border-b border-border/70'
-          : 'bg-transparent'
+          ? 'border-b border-border/70 shadow-sm'
+          : 'border-b border-transparent'
       }`}
     >
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
-        <a href="#top" className="flex items-center gap-2.5 min-h-11">
-          <CompassMark
-            className={`h-8 w-8 transition-colors ${
-              scrolled ? 'text-brass' : 'text-brass'
-            }`}
+      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+        <a href="#top" className="flex min-h-11 items-center" aria-label="Löytöretki – etusivu">
+          <img
+            src="/images/loytoretki-logo.png"
+            alt="Löytöretki"
+            className="h-6 w-auto mix-blend-multiply sm:h-7"
           />
-          <span
-            className={`font-serif text-lg font-semibold tracking-tight transition-colors ${
-              scrolled ? 'text-foreground' : 'text-background'
-            }`}
-          >
-            Löytöretki
-          </span>
         </a>
 
         <div className="hidden items-center gap-8 md:flex">
@@ -50,9 +42,7 @@ export function SiteNav() {
             <a
               key={l.href}
               href={l.href}
-              className={`text-sm font-medium transition-colors hover:text-brass ${
-                scrolled ? 'text-foreground/80' : 'text-background/85'
-              }`}
+              className="text-sm font-medium text-foreground/80 transition-colors hover:text-brass"
             >
               {l.label}
             </a>
@@ -71,9 +61,7 @@ export function SiteNav() {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? 'Sulje valikko' : 'Avaa valikko'}
           aria-expanded={open}
-          className={`flex h-11 w-11 items-center justify-center rounded-full md:hidden ${
-            scrolled ? 'text-foreground' : 'text-background'
-          }`}
+          className="flex h-11 w-11 items-center justify-center rounded-full text-foreground md:hidden"
         >
           {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
