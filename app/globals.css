@@ -13,6 +13,7 @@
   --color-brass-foreground: var(--brass-foreground);
   --color-clay: var(--clay);
   --color-ink: var(--ink);
+  --color-info: var(--info);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -83,6 +84,7 @@
   --brass-foreground: oklch(0.26 0.03 55);
   --clay: oklch(0.5 0.11 40);
   --ink: oklch(0.26 0.028 55);
+  --info: oklch(0.52 0.06 220);
   --chart-1: oklch(0.4 0.055 152);
   --chart-2: oklch(0.68 0.1 72);
   --chart-3: oklch(0.5 0.11 40);
