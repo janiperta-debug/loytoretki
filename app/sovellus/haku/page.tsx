@@ -1,35 +1,82 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, X, MapPin, SlidersHorizontal, Bell, ChevronRight } from "lucide-react"
-import { LOCATIONS, SCORE_META, type CompassScore } from "@/lib/loytoretki-data"
-import { ScoreDot } from "@/components/app/compass-bits"
+import { CATEGORY_LABELS } from "@/lib/loytoretki-data"
 
-const LEGEND: CompassScore[] = ["high", "mid", "low"]
+type Place = {
+  id: string
+  name: string
+  category: keyof typeof CATEGORY_LABELS
+  description: string | null
+  address: string | null
+  city: string | null
+  latitude: number | null
+  longitude: number | null
+  website: string | null
+  phone: string | null
+  opening_hours: unknown | null
+}
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export default function HakuPage() {
-  const [query, setQuery] = useState("Luistimet")
+  const [query, setQuery] = useState("")
+  const [places, setPlaces] = useState<Place[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadPlaces() {
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
+        setError("Supabase-yhteys ei ole vielä määritetty.")
+        setLoading(false)
+        return
+      }
+
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/places?select=*&order=city.asc,name.asc`,
+          { headers: { apikey: SUPABASE_KEY }, cache: "no-store" },
+        )
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+        const data = (await response.json()) as Place[]
+        if (!cancelled) setPlaces(data)
+      } catch {
+        if (!cancelled) setError("Kohteiden lataaminen ei onnistunut.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadPlaces()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const base = [...LOCATIONS].sort((a, b) => a.distanceKm - b.distanceKm)
-    if (!q) return base
-    const stem = q.slice(0, 4)
-    const matches = (t: string) => {
-      const s = t.toLowerCase()
-      return s.includes(q) || q.includes(s) || s.startsWith(stem)
-    }
-    return base.filter(
-      (l) =>
-        matches(l.name) ||
-        matches(l.town) ||
-        l.tags.some(matches) ||
-        l.keywords.some(matches) ||
-        matches(l.hitLine),
-    )
-  }, [query])
+    if (!q) return places
+
+    return places.filter((place) => {
+      const values = [
+        place.name,
+        place.city,
+        place.address,
+        place.description,
+        CATEGORY_LABELS[place.category],
+      ]
+      return values.some((value) => value?.toLowerCase().includes(q))
+    })
+  }, [places, query])
 
   return (
     <div className="min-h-full">
@@ -70,60 +117,63 @@ export default function HakuPage() {
 
       <div className="px-5 py-5">
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <h2 className="font-serif text-base font-semibold text-foreground">Kompassin arvioasteikko</h2>
-          <ul className="mt-3 space-y-2.5">
-            {LEGEND.map((s) => (
-              <li key={s} className="flex items-start gap-2.5">
-                <ScoreDot score={s} className="mt-1.5" />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold" style={{ color: SCORE_META[s].token }}>
-                    {SCORE_META[s].label}
-                  </p>
-                  <p className="text-sm leading-snug text-muted-foreground">{SCORE_META[s].blurb}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <h2 className="font-serif text-base font-semibold text-foreground">Löytöretken kompassi</h2>
+          <p className="mt-2 text-sm leading-snug text-muted-foreground">
+            Kompassi ei lupaa tarkkaa löytöä. Se kertoo myöhemmin havaintojen perusteella, missä kannattaa etsiä.
+          </p>
         </section>
 
         <ul className="mt-5 space-y-3">
-          {results.map((l) => (
-            <li key={l.id}>
+          {loading && (
+            <li className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+              Haetaan kohteita…
+            </li>
+          )}
+
+          {!loading && error && (
+            <li className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
+              {error}
+            </li>
+          )}
+
+          {!loading && !error && results.map((place) => (
+            <li key={place.id}>
               <Link
-                href={`/sovellus/kohde/${l.id}`}
+                href={`/sovellus/kohde/${place.id}`}
                 className="group flex items-stretch gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-transform active:scale-[0.99]"
               >
                 <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-lg">
-                  <Image src={l.image || "/placeholder.svg"} alt="" fill className="object-cover" sizes="80px" />
+                  <Image
+                    src={place.category === "kierratys" ? "/images/app/find-market.png" : "/images/app/find-ceramics.png"}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex items-center justify-between gap-2">
-                    <span
-                      className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em]"
-                      style={{
-                        backgroundColor: `color-mix(in oklch, ${SCORE_META[l.score].token} 18%, transparent)`,
-                        color: SCORE_META[l.score].token,
-                      }}
-                    >
-                      {SCORE_META[l.score].label}
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-secondary-foreground">
+                      {CATEGORY_LABELS[place.category]}
                     </span>
-                    <span className="shrink-0 text-xs font-medium text-muted-foreground tabular-nums">
-                      {l.distanceKm.toLocaleString("fi-FI")} km
+                    <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                      {place.city ?? ""}
                     </span>
                   </div>
-                  <h3 className="mt-1 truncate font-serif text-base font-semibold text-foreground">{l.name}</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Viimeisin tieto: {l.lastSeen}</p>
-                  <p className="mt-auto pt-1 text-sm text-foreground">{l.hitLine}</p>
+                  <h3 className="mt-1 truncate font-serif text-base font-semibold text-foreground">{place.name}</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{place.address ?? "Sijaintitieto saatavilla"}</p>
+                  <p className="mt-auto pt-1 text-sm text-foreground">
+                    {place.description ?? "Kohde on nyt mukana Löytöretken tietokannassa."}
+                  </p>
                 </div>
                 <ChevronRight className="my-auto h-5 w-5 shrink-0 self-center text-muted-foreground transition-transform group-active:translate-x-0.5" />
               </Link>
             </li>
           ))}
-          {results.length === 0 && (
+
+          {!loading && !error && results.length === 0 && (
             <li className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
-              Ei osumia haulle {'"'}
-              {query}
-              {'"'}. Kompassi ehdottaa laajentamaan sädettä.
+              Ei kohteita haulle {'"'}{query}{'"'}. Havaintoihin perustuva etsintä täydentyy seuraavassa vaiheessa.
             </li>
           )}
         </ul>
