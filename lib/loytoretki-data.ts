@@ -53,6 +53,8 @@ export type Location = {
   score: CompassScore
   markerNumber: number
   tags: string[]
+  /** product base-forms this place currently has, for search matching */
+  keywords: string[]
   lastSeen: string
   hitLine: string
   image: string
@@ -74,6 +76,7 @@ export const LOCATIONS: Location[] = [
     score: "high",
     markerNumber: 7,
     tags: ["Paljon talvivaatteita", "Arabia", "Retroa"],
+    keywords: ["luistimet", "arabia", "kirjat", "polkupyörät", "lego", "talvivaatteet", "retro"],
     lastSeen: "tänään 8:15",
     hitLine: "3 osumaa hakuehdoillesi",
     image: "/images/app/find-market.png",
@@ -99,6 +102,7 @@ export const LOCATIONS: Location[] = [
     score: "mid",
     markerNumber: 5,
     tags: ["Työkaluja", "Vinyylit", "Astiat"],
+    keywords: ["luistimet", "arabia", "kirjat", "polkupyörät", "lego", "työkalut", "vinyylit", "astiat"],
     lastSeen: "eilen 18:40",
     hitLine: "2 mahdollista osumaa",
     image: "/images/app/find-skates.png",
@@ -123,6 +127,7 @@ export const LOCATIONS: Location[] = [
     score: "low",
     markerNumber: 12,
     tags: ["Urheiluvälineet", "Kalusteet", "Lelut"],
+    keywords: ["luistimet", "arabia", "kirjat", "polkupyörät", "lego", "urheiluvälineet", "kalusteet", "lelut"],
     lastSeen: "tänään 7:50",
     hitLine: "Laaja valikoima urheilutarvikkeita",
     image: "/images/app/find-ceramics.png",
@@ -147,6 +152,7 @@ export const LOCATIONS: Location[] = [
     score: "mid",
     markerNumber: 8,
     tags: ["Huonekalut", "Kirjat", "Retroa"],
+    keywords: ["luistimet", "arabia", "kirjat", "polkupyörät", "lego", "huonekalut", "retro"],
     lastSeen: "eilen 12:10",
     hitLine: "Paljon talviurheiluvälineitä",
     image: "/images/app/find-market.png",
@@ -171,6 +177,7 @@ export const LOCATIONS: Location[] = [
     score: "low",
     markerNumber: 15,
     tags: ["Vaatteet", "Lelut", "Keittiö"],
+    keywords: ["arabia", "kirjat", "polkupyörät", "lego", "vaatteet", "lelut", "keittiö"],
     lastSeen: "tänään 9:30",
     hitLine: "Yleisvalikoima, vaihtuu usein",
     image: "/images/app/find-ceramics.png",

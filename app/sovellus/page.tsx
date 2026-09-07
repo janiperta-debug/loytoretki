@@ -30,7 +30,7 @@ export default function KotiPage() {
           subtitle="Inspiraatiota ja ideoita"
         />
         <ActionCard
-          href="/sovellus/etsi"
+          href="/sovellus/haku"
           icon={<Search className="h-6 w-6" strokeWidth={1.7} />}
           title="Etsi tiettyä tuotetta"
           subtitle="Sinulla on tehtävä mielessä"

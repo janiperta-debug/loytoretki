@@ -16,12 +16,18 @@ export default function HakuPage() {
     const q = query.trim().toLowerCase()
     const base = [...LOCATIONS].sort((a, b) => a.distanceKm - b.distanceKm)
     if (!q) return base
+    const stem = q.slice(0, 4)
+    const matches = (t: string) => {
+      const s = t.toLowerCase()
+      return s.includes(q) || q.includes(s) || s.startsWith(stem)
+    }
     return base.filter(
       (l) =>
-        l.name.toLowerCase().includes(q) ||
-        l.town.toLowerCase().includes(q) ||
-        l.tags.some((t) => t.toLowerCase().includes(q)) ||
-        l.hitLine.toLowerCase().includes(q),
+        matches(l.name) ||
+        matches(l.town) ||
+        l.tags.some(matches) ||
+        l.keywords.some(matches) ||
+        matches(l.hitLine),
     )
   }, [query])
 

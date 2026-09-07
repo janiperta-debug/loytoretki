@@ -42,7 +42,7 @@ export function BottomNav() {
 
         {/* Center compass — shortcut to the core find experience */}
         <Link
-          href="/sovellus/etsi"
+          href="/sovellus/haku"
           aria-label="Lähde löytöretkelle"
           className="absolute -top-6 left-1/2 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full border-4 border-card bg-forest text-forest-foreground shadow-lg shadow-black/25 transition-transform active:scale-95"
         >
