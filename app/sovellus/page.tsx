@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { CompassMark } from "@/components/compass-mark"
 import { NearbyPlaces } from "@/components/app/nearby-places"
+import { ObservationForm } from "@/components/app/observation-form"
 import { SOURCE_TYPES } from "@/lib/loytoretki-data"
 
 export default function KotiPage() {
@@ -46,6 +47,7 @@ export default function KotiPage() {
 
       <section className="space-y-4 px-4 py-6">
         <NearbyPlaces />
+        <ObservationForm />
 
         <InfoCard title="Kompassin periaatteet" icon={<CompassMark className="h-5 w-5 text-brass" aria-hidden />}>
           <p className="font-medium text-foreground">Ohjaa, ei lupaa.</p>
