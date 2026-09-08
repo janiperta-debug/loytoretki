@@ -1,9 +1,6 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 import {
-  Compass,
-  Search,
-  MapPin,
   ChevronRight,
   Store,
   Recycle,
@@ -11,7 +8,6 @@ import {
   Landmark,
   Plus,
   NotebookPen,
-  Lightbulb,
 } from "lucide-react"
 import { CompassMark } from "@/components/compass-mark"
 import { NearbyPlaces } from "@/components/app/nearby-places"
@@ -89,7 +85,7 @@ function HeroHeader() {
           <div>
             <h1 className="font-serif text-4xl font-semibold leading-none text-[oklch(0.96_0.02_88)]">
               Löytöretki
-            </h1>
+n            </h1>
             <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-brass">
               Löydä enemmän. Elä vähemmän.
             </p>
