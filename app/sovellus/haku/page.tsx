@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Search, X, MapPin, SlidersHorizontal, Bell, ChevronRight } from "lucide-react"
-import { CATEGORY_LABELS } from "@/lib/loytoretki-data"
+import { Search, X, MapPin, SlidersHorizontal, Bell, ChevronRight, Compass } from "lucide-react"
+import { CATEGORY_LABELS, SCORE_META } from "@/lib/loytoretki-data"
 
 type Place = {
   id: string
@@ -20,19 +20,41 @@ type Place = {
   opening_hours: unknown | null
 }
 
+type Product = {
+  id: string
+  name: string
+  description: string | null
+  category: string | null
+  keywords: string[]
+}
+
+type CompassResult = {
+  place_id: string
+  place_name: string
+  city: string | null
+  score: number
+  level: keyof typeof SCORE_META
+  observations_count: number
+  total_quantity: number
+  latest_observed_at: string
+}
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export default function HakuPage() {
   const [query, setQuery] = useState("")
   const [places, setPlaces] = useState<Place[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [compassResults, setCompassResults] = useState<CompassResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [compassLoading, setCompassLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
-    async function loadPlaces() {
+    async function loadData() {
       if (!SUPABASE_URL || !SUPABASE_KEY) {
         setError("Supabase-yhteys ei ole vielä määritetty.")
         setLoading(false)
@@ -40,23 +62,37 @@ export default function HakuPage() {
       }
 
       try {
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/places?select=*&order=city.asc,name.asc`,
-          { headers: { apikey: SUPABASE_KEY }, cache: "no-store" },
-        )
+        const [placesResponse, productsResponse] = await Promise.all([
+          fetch(
+            `${SUPABASE_URL}/rest/v1/places?select=*&order=city.asc,name.asc`,
+            { headers: { apikey: SUPABASE_KEY }, cache: "no-store" },
+          ),
+          fetch(
+            `${SUPABASE_URL}/rest/v1/products?select=id,name,description,category,keywords&order=name.asc`,
+            { headers: { apikey: SUPABASE_KEY }, cache: "no-store" },
+          ),
+        ])
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        if (!placesResponse.ok) throw new Error(`Places HTTP ${placesResponse.status}`)
+        if (!productsResponse.ok) throw new Error(`Products HTTP ${productsResponse.status}`)
 
-        const data = (await response.json()) as Place[]
-        if (!cancelled) setPlaces(data)
+        const [placeData, productData] = await Promise.all([
+          placesResponse.json() as Promise<Place[]>,
+          productsResponse.json() as Promise<Product[]>,
+        ])
+
+        if (!cancelled) {
+          setPlaces(placeData)
+          setProducts(productData)
+        }
       } catch {
-        if (!cancelled) setError("Kohteiden lataaminen ei onnistunut.")
+        if (!cancelled) setError("Tietojen lataaminen ei onnistunut.")
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
 
-    loadPlaces()
+    loadData()
     return () => {
       cancelled = true
     }
@@ -77,6 +113,61 @@ export default function HakuPage() {
       return values.some((value) => value?.toLowerCase().includes(q))
     })
   }, [places, query])
+
+  const matchedProduct = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return null
+
+    return (
+      products.find((product) => product.name.toLowerCase() === q) ??
+      products.find((product) =>
+        [product.name, ...(product.keywords ?? [])].some((value) => value.toLowerCase().includes(q)),
+      ) ??
+      null
+    )
+  }, [products, query])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCompass() {
+      if (!SUPABASE_URL || !SUPABASE_KEY || !matchedProduct) {
+        setCompassResults([])
+        setCompassLoading(false)
+        return
+      }
+
+      setCompassLoading(true)
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_compass_for_product`, {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ target_product_id: matchedProduct.id }),
+          cache: "no-store",
+        })
+
+        if (!response.ok) throw new Error(`Compass HTTP ${response.status}`)
+
+        const data = (await response.json()) as CompassResult[]
+        if (!cancelled) setCompassResults(data)
+      } catch {
+        if (!cancelled) setCompassResults([])
+      } finally {
+        if (!cancelled) setCompassLoading(false)
+      }
+    }
+
+    loadCompass()
+    return () => {
+      cancelled = true
+    }
+  }, [matchedProduct])
+
+  const compassMeta = matchedProduct ? SCORE_META : null
 
   return (
     <div className="min-h-full">
@@ -119,9 +210,60 @@ export default function HakuPage() {
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <h2 className="font-serif text-base font-semibold text-foreground">Löytöretken kompassi</h2>
           <p className="mt-2 text-sm leading-snug text-muted-foreground">
-            Kompassi ei lupaa tarkkaa löytöä. Se kertoo myöhemmin havaintojen perusteella, missä kannattaa etsiä.
+            Kompassi ei lupaa tarkkaa löytöä. Se kertoo havaintojen perusteella, missä kannattaa etsiä.
           </p>
         </section>
+
+        {matchedProduct && (
+          <section className="mt-5 rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Compass className="h-5 w-5 text-brass" aria-hidden />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Kompassi</p>
+                <h2 className="font-serif text-lg font-semibold text-foreground">{matchedProduct.name}</h2>
+              </div>
+            </div>
+
+            {compassLoading && (
+              <p className="mt-4 text-sm text-muted-foreground">Lasketaan havaintoihin perustuvaa kompassia…</p>
+            )}
+
+            {!compassLoading && compassResults.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {compassResults.map((result) => {
+                  const meta = SCORE_META[result.level]
+                  return (
+                    <Link
+                      key={result.place_id}
+                      href={`/sovellus/kohde/${result.place_id}`}
+                      className="block rounded-xl border border-border bg-background p-3 transition-transform active:scale-[0.99]"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate font-serif text-base font-semibold text-foreground">{result.place_name}</h3>
+                          <p className="text-xs text-muted-foreground">{result.city ?? ""}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
+                          {result.score} · {meta.label}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{meta.blurb}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {result.observations_count} havainto{result.observations_count === 1 ? "" : "a"} · määrä {result.total_quantity}
+                      </p>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+
+            {!compassLoading && compassResults.length === 0 && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Tästä tuotteesta ei ole vielä havaintoja, joiden perusteella kompassi voisi ohjata.
+              </p>
+            )}
+          </section>
+        )}
 
         <ul className="mt-5 space-y-3">
           {loading && (
@@ -171,7 +313,7 @@ export default function HakuPage() {
             </li>
           ))}
 
-          {!loading && !error && results.length === 0 && (
+          {!loading && !error && results.length === 0 && !matchedProduct && (
             <li className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
               Ei kohteita haulle {'"'}{query}{'"'}. Havaintoihin perustuva etsintä täydentyy seuraavassa vaiheessa.
             </li>
