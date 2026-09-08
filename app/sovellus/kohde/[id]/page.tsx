@@ -26,10 +26,21 @@ type Place = {
   opening_hours: unknown | null
 }
 
+type Observation = {
+  id: string
+  text: string
+  quantity: number | null
+  observed_at: string
+  source: string
+  products: { name: string } | null
+}
+
 export default function KohdePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [place, setPlace] = useState<Place | null>(null)
+  const [observations, setObservations] = useState<Observation[]>([])
   const [loading, setLoading] = useState(true)
+  const [observationsLoading, setObservationsLoading] = useState(true)
   const [error, setError] = useState(false)
   const [tab, setTab] = useState<(typeof TABS)[number]>("Yleiskatsaus")
   const [saved, setSaved] = useState(false)
@@ -41,29 +52,46 @@ export default function KohdePage({ params }: { params: Promise<{ id: string }> 
       if (!SUPABASE_URL || !SUPABASE_KEY) {
         setError(true)
         setLoading(false)
+        setObservationsLoading(false)
         return
       }
 
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/places?id=eq.${encodeURIComponent(id)}&select=*`, {
-          headers: {
-            apikey: SUPABASE_KEY,
-            Authorization: `Bearer ${SUPABASE_KEY}`,
-          },
-          cache: "no-store",
-        })
+        const headers = {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+        }
 
-        if (!response.ok) throw new Error("Failed to load place")
+        const [placeResponse, observationsResponse] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/places?id=eq.${encodeURIComponent(id)}&select=*`, {
+            headers,
+            cache: "no-store",
+          }),
+          fetch(
+            `${SUPABASE_URL}/rest/v1/observations?place_id=eq.${encodeURIComponent(id)}&select=id,text,quantity,observed_at,source,products(name)&order=observed_at.desc`,
+            { headers, cache: "no-store" },
+          ),
+        ])
 
-        const rows = (await response.json()) as Place[]
+        if (!placeResponse.ok) throw new Error("Failed to load place")
+
+        const rows = (await placeResponse.json()) as Place[]
         if (!cancelled) {
           setPlace(rows[0] ?? null)
           setError(false)
         }
+
+        if (observationsResponse.ok) {
+          const observationRows = (await observationsResponse.json()) as Observation[]
+          if (!cancelled) setObservations(observationRows)
+        }
       } catch {
         if (!cancelled) setError(true)
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+          setObservationsLoading(false)
+        }
       }
     }
 
@@ -152,7 +180,9 @@ export default function KohdePage({ params }: { params: Promise<{ id: string }> 
 
       <div className="px-4 py-5">
         {tab === "Yleiskatsaus" && place ? (
-          <Overview place={place} />
+          <Overview place={place} onShowObservations={() => setTab("Ilmoitukset")} />
+        ) : tab === "Ilmoitukset" ? (
+          <Observations observations={observations} loading={observationsLoading} />
         ) : (
           <div className="rounded-2xl border border-dashed border-border bg-card/60 p-10 text-center">
             <p className="font-serif text-base text-foreground">{tab}</p>
@@ -164,7 +194,7 @@ export default function KohdePage({ params }: { params: Promise<{ id: string }> 
   )
 }
 
-function Overview({ place }: { place: Place }) {
+function Overview({ place, onShowObservations }: { place: Place; onShowObservations: () => void }) {
   return (
     <div className="space-y-6">
       <section>
@@ -183,7 +213,7 @@ function Overview({ place }: { place: Place }) {
       </section>
 
       <div className="space-y-3">
-        <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-forest py-3.5 text-sm font-semibold text-forest-foreground shadow-md transition-transform active:scale-[0.99]">
+        <button onClick={onShowObservations} className="flex w-full items-center justify-center gap-2 rounded-xl bg-forest py-3.5 text-sm font-semibold text-forest-foreground shadow-md transition-transform active:scale-[0.99]">
           Näytä viimeisimmät ilmoitukset
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -194,6 +224,55 @@ function Overview({ place }: { place: Place }) {
       </div>
     </div>
   )
+}
+
+function Observations({ observations, loading }: { observations: Observation[]; loading: boolean }) {
+  if (loading) {
+    return <p className="text-sm text-muted-foreground">Haetaan ilmoituksia…</p>
+  }
+
+  if (!observations.length) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
+        <p className="font-serif text-base text-foreground">Ei vielä ilmoituksia</p>
+        <p className="mt-1 text-sm text-muted-foreground">Ole ensimmäinen, joka kertoo mitä täältä löytyi.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h2 className="font-serif text-lg font-semibold text-foreground">Viimeisimmät ilmoitukset</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Yhteisön tuoreimmat havainnot tästä kohteesta.</p>
+      </div>
+      {observations.map((observation) => (
+        <article key={observation.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-serif font-semibold text-foreground">{observation.products?.name ?? "Havainto"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{formatObservedAt(observation.observed_at)}</p>
+            </div>
+            {observation.quantity !== null ? (
+              <span className="shrink-0 rounded-full border border-brass/40 px-2.5 py-1 text-xs font-semibold text-brass">
+                {observation.quantity} kpl
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{observation.text}</p>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function formatObservedAt(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat("fi-FI", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)
 }
 
 function formatOpeningHours(value: unknown) {
