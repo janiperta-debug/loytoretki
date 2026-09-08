@@ -11,7 +11,6 @@ import {
   Landmark,
   Plus,
   NotebookPen,
-  Sparkles,
   Lightbulb,
 } from "lucide-react"
 import { CompassMark } from "@/components/compass-mark"
@@ -23,27 +22,6 @@ export default function KotiPage() {
   return (
     <div>
       <HeroHeader />
-
-      <section className="space-y-3 px-4 pt-5">
-        <ActionCard
-          href="/sovellus/kartta"
-          icon={<Compass className="h-6 w-6" strokeWidth={1.7} />}
-          title="Lähde löytöretkelle"
-          subtitle="Inspiraatiota ja ideoita"
-        />
-        <ActionCard
-          href="/sovellus/haku"
-          icon={<Search className="h-6 w-6" strokeWidth={1.7} />}
-          title="Etsi tiettyä tuotetta"
-          subtitle="Sinulla on tehtävä mielessä"
-        />
-        <ActionCard
-          href="/sovellus/kartta"
-          icon={<MapPin className="h-6 w-6" strokeWidth={1.7} />}
-          title="Lähipaikan kohokohdat"
-          subtitle="Katso missä kannattaa käydä"
-        />
-      </section>
 
       <section className="space-y-4 px-4 py-6">
         <NearbyPlaces />
@@ -77,19 +55,6 @@ export default function KotiPage() {
           </InfoCard>
         </Link>
 
-        <InfoCard title="Kaksi tapaa lähteä" icon={<Sparkles className="h-5 w-5 text-brass" aria-hidden />}>
-          <div className="mt-1 grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-border bg-background/60 p-3">
-              <p className="font-semibold text-foreground">Inspiraatio</p>
-              <p className="mt-1 text-xs">Selaile kohteita, teemoja ja paikallisia vinkkejä.</p>
-            </div>
-            <div className="rounded-lg border border-border bg-background/60 p-3">
-              <p className="font-semibold text-foreground">Etsi tuotetta</p>
-              <p className="mt-1 text-xs">Kirjoita mitä haet ja kompassi näyttää suunnan.</p>
-            </div>
-          </div>
-        </InfoCard>
-
         <InfoCard title="Mukana useita lähteitä" icon={<Store className="h-5 w-5 text-brass" aria-hidden />}>
           <div className="mt-1 flex flex-wrap gap-2">
             {SOURCE_TYPES.map((s) => (
@@ -102,13 +67,6 @@ export default function KotiPage() {
               </span>
             ))}
           </div>
-        </InfoCard>
-
-        <InfoCard title="Arkeologin vinkki" icon={<Lightbulb className="h-5 w-5 text-brass" aria-hidden />}>
-          <p>
-            Parhaat löydöt eivät aina näy otsikoissa. Katso kuvat, kysy myyjältä ja seuraa rohkeasti
-            intuitiotasi.
-          </p>
         </InfoCard>
       </section>
     </div>
@@ -142,36 +100,6 @@ function HeroHeader() {
         </p>
       </div>
     </header>
-  )
-}
-
-function ActionCard({
-  href,
-  icon,
-  title,
-  subtitle,
-}: {
-  href: string
-  icon: ReactNode
-  title: string
-  subtitle: string
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-brass/60 active:bg-secondary"
-    >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-forest/10 text-forest">
-        {icon}
-      </span>
-      <span className="flex-1">
-        <span className="block font-serif text-base font-semibold uppercase tracking-wide text-foreground">
-          {title}
-        </span>
-        <span className="mt-0.5 block text-sm text-muted-foreground">{subtitle}</span>
-      </span>
-      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-    </Link>
   )
 }
 
