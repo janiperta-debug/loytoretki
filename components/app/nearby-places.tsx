@@ -67,7 +67,6 @@ export function NearbyPlaces() {
         distance: distanceKm(location.latitude, location.longitude, place.latitude!, place.longitude!),
       }))
       .sort((a, b) => a.distance - b.distance)
-      .slice(0, 3)
   }, [location, places])
 
   if (locationLoading || loadingPlaces) {
@@ -111,7 +110,7 @@ export function NearbyPlaces() {
         <h2 className="font-serif text-lg font-semibold uppercase tracking-wide text-foreground">Lähelläsi</h2>
       </div>
       {nearby.length ? (
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 max-h-[18rem] space-y-2 overflow-y-auto pr-1">
           {nearby.map((place) => (
             <Link
               key={place.id}
