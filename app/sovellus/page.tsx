@@ -12,9 +12,6 @@ export default function KotiPage() {
       <HeroHeader />
 
       <section className="space-y-4 px-4 py-6">
-        <NearbyPlaces />
-        <ObservationForm />
-
         <InfoCard title="Kompassin periaatteet" icon={<CompassMark className="h-5 w-5 text-brass" aria-hidden />}>
           <p className="font-medium text-foreground">Ohjaa, ei lupaa.</p>
           <ul className="mt-2 space-y-1.5">
@@ -23,6 +20,9 @@ export default function KotiPage() {
             <li className="flex gap-2"><span className="text-brass">✦</span>Löytöretki on apurisi, ei takauksesi.</li>
           </ul>
         </InfoCard>
+
+        <NearbyPlaces />
+        <ObservationForm />
 
         <Link href="/sovellus/paivakirja" className="block">
           <InfoCard title="Retkipäiväkirja" icon={<NotebookPen className="h-5 w-5 text-brass" aria-hidden />} action="Avaa päiväkirja">
