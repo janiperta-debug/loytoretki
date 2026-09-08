@@ -15,6 +15,7 @@ import {
   Lightbulb,
 } from "lucide-react"
 import { CompassMark } from "@/components/compass-mark"
+import { NearbyPlaces } from "@/components/app/nearby-places"
 import { SOURCE_TYPES } from "@/lib/loytoretki-data"
 
 export default function KotiPage() {
@@ -38,12 +39,14 @@ export default function KotiPage() {
         <ActionCard
           href="/sovellus/kartta"
           icon={<MapPin className="h-6 w-6" strokeWidth={1.7} />}
-          title="Lähipaikan kohokohteet"
+          title="Lähipaikan kohokohdat"
           subtitle="Katso missä kannattaa käydä"
         />
       </section>
 
       <section className="space-y-4 px-4 py-6">
+        <NearbyPlaces />
+
         <InfoCard title="Kompassin periaatteet" icon={<CompassMark className="h-5 w-5 text-brass" aria-hidden />}>
           <p className="font-medium text-foreground">Ohjaa, ei lupaa.</p>
           <ul className="mt-2 space-y-1.5">
