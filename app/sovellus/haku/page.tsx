@@ -167,8 +167,6 @@ export default function HakuPage() {
     }
   }, [matchedProduct])
 
-  const compassMeta = matchedProduct ? SCORE_META : null
-
   return (
     <div className="min-h-full">
       <header className="border-b border-border/70 bg-card/80 px-5 pb-4 pt-6 backdrop-blur">
