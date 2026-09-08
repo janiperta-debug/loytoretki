@@ -2,23 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { Search, X, MapPin, SlidersHorizontal, Bell, ChevronRight, Compass } from "lucide-react"
-import { CATEGORY_LABELS, SCORE_META } from "@/lib/loytoretki-data"
-
-type Place = {
-  id: string
-  name: string
-  category: keyof typeof CATEGORY_LABELS
-  description: string | null
-  address: string | null
-  city: string | null
-  latitude: number | null
-  longitude: number | null
-  website: string | null
-  phone: string | null
-  opening_hours: unknown | null
-}
+import { SCORE_META } from "@/lib/loytoretki-data"
 
 type Product = {
   id: string
@@ -44,7 +29,6 @@ const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export default function HakuPage() {
   const [query, setQuery] = useState("")
-  const [places, setPlaces] = useState<Place[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [compassResults, setCompassResults] = useState<CompassResult[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,7 +38,7 @@ export default function HakuPage() {
   useEffect(() => {
     let cancelled = false
 
-    async function loadData() {
+    async function loadProducts() {
       if (!SUPABASE_URL || !SUPABASE_KEY) {
         setError("Supabase-yhteys ei ole vielä määritetty.")
         setLoading(false)
@@ -62,57 +46,27 @@ export default function HakuPage() {
       }
 
       try {
-        const [placesResponse, productsResponse] = await Promise.all([
-          fetch(
-            `${SUPABASE_URL}/rest/v1/places?select=*&order=city.asc,name.asc`,
-            { headers: { apikey: SUPABASE_KEY }, cache: "no-store" },
-          ),
-          fetch(
-            `${SUPABASE_URL}/rest/v1/products?select=id,name,description,category,keywords&order=name.asc`,
-            { headers: { apikey: SUPABASE_KEY }, cache: "no-store" },
-          ),
-        ])
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/products?select=id,name,description,category,keywords&order=name.asc`,
+          { headers: { apikey: SUPABASE_KEY }, cache: "no-store" },
+        )
 
-        if (!placesResponse.ok) throw new Error(`Places HTTP ${placesResponse.status}`)
-        if (!productsResponse.ok) throw new Error(`Products HTTP ${productsResponse.status}`)
+        if (!response.ok) throw new Error(`Products HTTP ${response.status}`)
 
-        const [placeData, productData] = await Promise.all([
-          placesResponse.json() as Promise<Place[]>,
-          productsResponse.json() as Promise<Product[]>,
-        ])
-
-        if (!cancelled) {
-          setPlaces(placeData)
-          setProducts(productData)
-        }
+        const data = (await response.json()) as Product[]
+        if (!cancelled) setProducts(data)
       } catch {
-        if (!cancelled) setError("Tietojen lataaminen ei onnistunut.")
+        if (!cancelled) setError("Tuotteiden lataaminen ei onnistunut.")
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
 
-    loadData()
+    loadProducts()
     return () => {
       cancelled = true
     }
   }, [])
-
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return places
-
-    return places.filter((place) => {
-      const values = [
-        place.name,
-        place.city,
-        place.address,
-        place.description,
-        CATEGORY_LABELS[place.category],
-      ]
-      return values.some((value) => value?.toLowerCase().includes(q))
-    })
-  }, [places, query])
 
   const matchedProduct = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -167,7 +121,7 @@ export default function HakuPage() {
     }
   }, [matchedProduct])
 
-  const compassCount = matchedProduct ? compassResults.length : results.length
+  const resultCount = matchedProduct ? compassResults.length : 0
 
   return (
     <div className="min-h-full">
@@ -186,7 +140,7 @@ export default function HakuPage() {
             className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
           />
           <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-sm font-semibold text-secondary-foreground tabular-nums">
-            {compassCount}
+            {resultCount}
           </span>
           {query && (
             <button
@@ -266,60 +220,23 @@ export default function HakuPage() {
           </section>
         )}
 
-        <ul className="mt-5 space-y-3">
-          {loading && (
-            <li className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-              Haetaan kohteita…
-            </li>
-          )}
+        {!loading && !error && query.trim() && !matchedProduct && (
+          <section className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
+            Tuotetta ei löytynyt haulle {'"'}{query}{'"'}.
+          </section>
+        )}
 
-          {!loading && error && (
-            <li className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
-              {error}
-            </li>
-          )}
+        {loading && (
+          <section className="mt-5 rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            Haetaan tuotteita…
+          </section>
+        )}
 
-          {!loading && !error && results.map((place) => (
-            <li key={place.id}>
-              <Link
-                href={`/sovellus/kohde/${place.id}`}
-                className="group flex items-stretch gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-transform active:scale-[0.99]"
-              >
-                <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-lg">
-                  <Image
-                    src={place.category === "kierratys" ? "/images/app/find-market.png" : "/images/app/find-ceramics.png"}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                  />
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-secondary-foreground">
-                      {CATEGORY_LABELS[place.category]}
-                    </span>
-                    <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                      {place.city ?? ""}
-                    </span>
-                  </div>
-                  <h3 className="mt-1 truncate font-serif text-base font-semibold text-foreground">{place.name}</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{place.address ?? "Sijaintitieto saatavilla"}</p>
-                  <p className="mt-auto pt-1 text-sm text-foreground">
-                    {place.description ?? "Kohde on nyt mukana Löytöretken tietokannassa."}
-                  </p>
-                </div>
-                <ChevronRight className="my-auto h-5 w-5 shrink-0 self-center text-muted-foreground transition-transform group-active:translate-x-0.5" />
-              </Link>
-            </li>
-          ))}
-
-          {!loading && !error && results.length === 0 && !matchedProduct && (
-            <li className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
-              Ei kohteita haulle {'"'}{query}{'"'}. Havaintoihin perustuva etsintä täydentyy seuraavassa vaiheessa.
-            </li>
-          )}
-        </ul>
+        {!loading && error && (
+          <section className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
+            {error}
+          </section>
+        )}
 
         <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground shadow-sm transition-transform active:scale-[0.99]">
           <Bell className="h-4 w-4 text-brass" aria-hidden />
