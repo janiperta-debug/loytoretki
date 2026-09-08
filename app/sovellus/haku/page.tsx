@@ -167,6 +167,8 @@ export default function HakuPage() {
     }
   }, [matchedProduct])
 
+  const compassCount = matchedProduct ? compassResults.length : results.length
+
   return (
     <div className="min-h-full">
       <header className="border-b border-border/70 bg-card/80 px-5 pb-4 pt-6 backdrop-blur">
@@ -184,7 +186,7 @@ export default function HakuPage() {
             className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
           />
           <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-sm font-semibold text-secondary-foreground tabular-nums">
-            {results.length}
+            {compassCount}
           </span>
           {query && (
             <button
@@ -241,8 +243,9 @@ export default function HakuPage() {
                           <h3 className="truncate font-serif text-base font-semibold text-foreground">{result.place_name}</h3>
                           <p className="text-xs text-muted-foreground">{result.city ?? ""}</p>
                         </div>
-                        <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
-                          {result.score} · {meta.label}
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
+                          <span className={`h-2 w-2 rounded-full ${meta.dotClass}`} aria-hidden />
+                          {meta.label}
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground">{meta.blurb}</p>
