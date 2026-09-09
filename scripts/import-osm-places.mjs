@@ -1,6 +1,8 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const OVERPASS_URL = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter"
+const OSM_CITY = process.env.OSM_CITY || "Tampere"
+const OSM_BBOX = process.env.OSM_BBOX || "61.40,23.60,61.60,24.00"
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before running the importer.")
@@ -9,11 +11,11 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 const query = `
 [out:json][timeout:60];
 (
-  nwr["shop"="second_hand"](61.40,23.60,61.60,24.00);
-  nwr["shop"="antiques"](61.40,23.60,61.60,24.00);
-  nwr["shop"="charity"](61.40,23.60,61.60,24.00);
-  nwr["shop"="auction"](61.40,23.60,61.60,24.00);
-  nwr["amenity"="recycling"](61.40,23.60,61.60,24.00);
+  nwr["shop"="second_hand"](${OSM_BBOX});
+  nwr["shop"="antiques"](${OSM_BBOX});
+  nwr["shop"="charity"](${OSM_BBOX});
+  nwr["shop"="auction"](${OSM_BBOX});
+  nwr["amenity"="recycling"](${OSM_BBOX});
 );
 out center tags;
 `
@@ -32,7 +34,7 @@ function categoryFor(tags) {
 }
 
 function cityFor(tags) {
-  return tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || "Tampere"
+  return tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || OSM_CITY
 }
 
 function addressFor(tags) {
@@ -124,7 +126,7 @@ async function main() {
     inserted += 1
   }
 
-  console.log(`OSM import complete: ${normalized.length} places normalized, ${inserted} inserted, ${updated} updated.`)
+  console.log(`OSM import complete for ${OSM_CITY}: ${normalized.length} places normalized, ${inserted} inserted, ${updated} updated.`)
 }
 
 main().catch((error) => {
