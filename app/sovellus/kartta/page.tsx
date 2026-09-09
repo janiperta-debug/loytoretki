@@ -16,7 +16,8 @@ type Place = {
   longitude: number | null
 }
 
-type MapPlace = Place & { x: number; y: number; markerNumber: number }
+type MapPlace = Place & { dx: number; dy: number; markerNumber: number }
+type Tile = { x: number; y: number; left: number; top: number }
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "kaikki", label: "Kaikki" },
@@ -27,6 +28,8 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const TILE_SIZE = 256
+const MAP_ZOOM = 12
 
 function matches(place: Place, filter: Filter) {
   if (filter === "kaikki") return true
@@ -50,35 +53,64 @@ function categoryLabel(category: string) {
   }
 }
 
-function getMapBounds(places: Place[]) {
+function lonToPixel(lon: number, zoom: number) {
+  return ((lon + 180) / 360) * 2 ** zoom * TILE_SIZE
+}
+
+function latToPixel(lat: number, zoom: number) {
+  const latRad = (lat * Math.PI) / 180
+  return (
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
+    2 ** zoom *
+    TILE_SIZE
+  )
+}
+
+function getMapCenter(places: Place[]) {
   const located = places.filter((place) => place.latitude != null && place.longitude != null)
-  if (!located.length) {
-    return { minLat: 61.42, maxLat: 61.53, minLng: 23.70, maxLng: 23.90 }
-  }
+  if (!located.length) return null
 
   const lats = located.map((place) => place.latitude!)
   const lngs = located.map((place) => place.longitude!)
 
   return {
-    minLat: Math.min(...lats) - 0.015,
-    maxLat: Math.max(...lats) + 0.015,
-    minLng: Math.min(...lngs) - 0.02,
-    maxLng: Math.max(...lngs) + 0.02,
+    latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
+    longitude: (Math.min(...lngs) + Math.max(...lngs)) / 2,
   }
 }
 
-function projectToMap(places: Place[]): MapPlace[] {
-  const located = places.filter((place) => place.latitude != null && place.longitude != null)
-  if (!located.length) return []
+function getTiles(center: { latitude: number; longitude: number }): Tile[] {
+  const centerX = lonToPixel(center.longitude, MAP_ZOOM)
+  const centerY = latToPixel(center.latitude, MAP_ZOOM)
+  const centerTileX = Math.floor(centerX / TILE_SIZE)
+  const centerTileY = Math.floor(centerY / TILE_SIZE)
+  const offsetX = centerX - centerTileX * TILE_SIZE
+  const offsetY = centerY - centerTileY * TILE_SIZE
 
-  const { minLat, maxLat, minLng, maxLng } = getMapBounds(located)
+  return [-2, -1, 0, 1, 2].flatMap((dx) =>
+    [-2, -1, 0, 1, 2].map((dy) => ({
+      x: centerTileX + dx,
+      y: centerTileY + dy,
+      left: -offsetX - TILE_SIZE / 2 + dx * TILE_SIZE,
+      top: -offsetY - TILE_SIZE / 2 + dy * TILE_SIZE,
+    })),
+  )
+}
 
-  return located.map((place, index) => ({
-    ...place,
-    x: ((place.longitude! - minLng) / (maxLng - minLng)) * 100,
-    y: (1 - (place.latitude! - minLat) / (maxLat - minLat)) * 100,
-    markerNumber: index + 1,
-  }))
+function projectToMap(places: Place[], center: { latitude: number; longitude: number } | null): MapPlace[] {
+  if (!center) return []
+
+  const centerX = lonToPixel(center.longitude, MAP_ZOOM)
+  const centerY = latToPixel(center.latitude, MAP_ZOOM)
+
+  return places
+    .filter((place) => place.latitude != null && place.longitude != null)
+    .map((place, index) => ({
+      ...place,
+      dx: lonToPixel(place.longitude!, MAP_ZOOM) - centerX,
+      dy: latToPixel(place.latitude!, MAP_ZOOM) - centerY,
+      markerNumber: index + 1,
+    }))
 }
 
 export default function KarttaPage() {
@@ -111,11 +143,11 @@ export default function KarttaPage() {
     loadPlaces()
   }, [])
 
-  const mapPlaces = useMemo(() => projectToMap(places), [places])
+  const mapCenter = useMemo(() => getMapCenter(places), [places])
+  const tiles = useMemo(() => (mapCenter ? getTiles(mapCenter) : []), [mapCenter])
+  const mapPlaces = useMemo(() => projectToMap(places, mapCenter), [places, mapCenter])
   const visible = mapPlaces.filter((place) => matches(place, filter))
   const selected = visible.find((place) => place.id === selectedId) ?? visible[0] ?? null
-  const bounds = useMemo(() => getMapBounds(places), [places])
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}&layer=mapnik`
 
   return (
     <div className="flex flex-col">
@@ -151,22 +183,28 @@ export default function KarttaPage() {
       </div>
 
       <div className="relative mx-4 h-[26rem] overflow-hidden rounded-2xl border border-border bg-[#e8e2d2] shadow-inner">
-        <iframe
-          title="Löytöretken kartta"
-          src={mapUrl}
-          className="absolute inset-0 h-full w-full border-0"
-          loading="lazy"
-          aria-label="OpenStreetMap kartta"
-        />
-
-        {/* Löytöretken paperimainen maski säilyttää nykyisen visuaalisen ilmeen. */}
-        <img
-          src="/images/app/paper-map.png"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-multiply"
-        />
-        <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.16)]" />
+        {mapCenter ? (
+          <div className="absolute inset-0 overflow-hidden bg-[#d8d0bd]" aria-label="OpenStreetMap-kartta">
+            {tiles.map((tile) => (
+              <img
+                key={`${tile.x}-${tile.y}`}
+                src={`https://tile.openstreetmap.org/${MAP_ZOOM}/${tile.x}/${tile.y}.png`}
+                alt=""
+                className="pointer-events-none absolute h-64 w-64 max-w-none"
+                style={{ left: `calc(50% + ${tile.left}px)`, top: `calc(50% + ${tile.top}px)` }}
+              />
+            ))}
+            <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.18)]" />
+            <img
+              src="/images/app/paper-map.png"
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20 mix-blend-multiply"
+            />
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-[oklch(0.9_0.03_80)]" />
+        )}
 
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -241,7 +279,7 @@ function MapMarker({
       onClick={onSelect}
       aria-label={`${place.name}, ${categoryLabel(place.category)}`}
       className="marker-pop absolute flex -translate-x-1/2 -translate-y-full flex-col items-center"
-      style={{ left: `${place.x}%`, top: `${place.y}%` }}
+      style={{ left: `calc(50% + ${place.dx}px)`, top: `calc(48% + ${place.dy}px)` }}
       aria-pressed={active}
     >
       <span
