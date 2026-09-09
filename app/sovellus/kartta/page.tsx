@@ -94,26 +94,15 @@ function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selected
     }, () => {}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 })
   }
 
-  return <div ref={ref} className="absolute inset-0 cursor-grab touch-none overflow-hidden active:cursor-grabbing" role="application" aria-label="Siirrettävä OpenStreetMap-kartta"
+  return <div ref={ref} className="absolute inset-3 cursor-grab touch-none overflow-hidden rounded-xl active:cursor-grabbing shadow-[0_2px_8px_oklch(0.3_0.03_60_/_0.18)]" role="application" aria-label="Siirrettävä OpenStreetMap-kartta"
     onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, cx: centerWorld.x, cy: centerWorld.y } }}
     onPointerMove={e => { if (drag.current) panTo(drag.current.cx - (e.clientX - drag.current.x), drag.current.cy - (e.clientY - drag.current.y)) }}
     onPointerUp={() => { drag.current = null }} onPointerCancel={() => { drag.current = null }}
     onWheel={e => { e.preventDefault(); const r = ref.current?.getBoundingClientRect(); if (r) zoomAt(zoom + (e.deltaY < 0 ? 1 : -1), e.clientX - r.left, e.clientY - r.top) }}>
     <div className="absolute inset-0 overflow-hidden bg-[#d9d4c7]">
       {tiles.map(t => <img key={`${t.x}-${t.y}-${t.left}`} src={`https://tile.openstreetmap.org/${zoom}/${t.x}/${t.y}.png`} alt="" draggable={false} className="pointer-events-none absolute h-64 w-64 max-w-none select-none" style={{ left: t.left, top: t.top, filter: "sepia(.28) saturate(.68) contrast(.88) brightness(1.05)" }} />)}
-      <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.38)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.18)]" />
     </div>
-    <img
-      src="/images/app/paper-map.png"
-      alt=""
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-multiply"
-      style={{
-        maskImage: "radial-gradient(ellipse at center, transparent 0%, transparent 58%, black 86%, black 100%)",
-        WebkitMaskImage: "radial-gradient(ellipse at center, transparent 0%, transparent 58%, black 86%, black 100%)",
-      }}
-    />
-    <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_24px_oklch(0.35_0.03_60_/_0.18)]" />
     {projected.map(p => <MapMarker key={p.id} place={p} active={p.id === selectedId} onSelect={() => onSelect(p.id)} />)}
     {userLocation && <span className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2" style={{ left: size.width / 2 + worldX(userLocation.longitude, zoom) - centerWorld.x, top: size.height / 2 + worldY(userLocation.latitude, zoom) - centerWorld.y }}><span className="block h-4 w-4 rounded-full border-2 border-background bg-info shadow-md" /><span className="absolute inset-0 -z-10 m-auto h-8 w-8 animate-ping rounded-full bg-info/30" /></span>}
     <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-lg border border-border bg-card/90 shadow-md">
@@ -155,7 +144,10 @@ export default function KarttaPage() {
   return <div className="flex flex-col">
     <header className="flex items-center justify-between px-4 pb-3 pt-6"><span className="w-9" /><h1 className="font-serif text-xl font-semibold uppercase tracking-[0.15em]">Retkikartta</h1><button type="button" className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card" aria-label="Kartan suodattimet"><SlidersHorizontal className="h-4 w-4" /></button></header>
     <div className="flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{FILTERS.map(f => <button key={f.key} type="button" onClick={() => setFilter(f.key)} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium ${filter === f.key ? "border-forest bg-forest text-forest-foreground" : "border-border bg-card"}`}>{f.label}</button>)}</div>
-    <div className="relative mx-4 h-[26rem] overflow-hidden rounded-2xl border border-border bg-[#e8e2d2] shadow-inner"><MapCanvas places={visible} selectedId={selected?.id ?? null} onSelect={setSelectedId} />{loading && <div className="absolute inset-0 z-20 flex items-center justify-center bg-card/20"><span className="rounded-full border border-border bg-card/90 px-4 py-2 text-sm text-muted-foreground shadow-sm">Haetaan karttakohteita…</span></div>}</div>
+    <div className="relative mx-4 h-[26rem] overflow-hidden rounded-2xl border border-border bg-[#e8e2d2] shadow-inner" style={{ backgroundImage: "url('/images/app/paper-map.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
+      <MapCanvas places={visible} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
+      {loading && <div className="absolute inset-0 z-20 flex items-center justify-center bg-card/20"><span className="rounded-full border border-border bg-card/90 px-4 py-2 text-sm text-muted-foreground shadow-sm">Haetaan karttakohteita…</span></div>}
+    </div>
     <div className="px-4 pt-3">{selected ? <SelectedCard place={selected} /> : <p className="rounded-xl border border-dashed border-border bg-card p-4 text-center text-sm text-muted-foreground">Ei kohteita tällä suodattimella. Valitse toinen luokka.</p>}</div>
   </div>
 }
