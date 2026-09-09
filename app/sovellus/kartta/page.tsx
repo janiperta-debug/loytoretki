@@ -103,7 +103,17 @@ function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selected
       {tiles.map(t => <img key={`${t.x}-${t.y}-${t.left}`} src={`https://tile.openstreetmap.org/${zoom}/${t.x}/${t.y}.png`} alt="" draggable={false} className="pointer-events-none absolute h-64 w-64 max-w-none select-none" style={{ left: t.left, top: t.top, filter: "sepia(.28) saturate(.68) contrast(.88) brightness(1.05)" }} />)}
       <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.38)]" />
     </div>
-    <img src="/images/app/paper-map.png" alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-multiply" />
+    <img
+      src="/images/app/paper-map.png"
+      alt=""
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-multiply"
+      style={{
+        maskImage: "radial-gradient(ellipse at center, transparent 0%, transparent 58%, black 86%, black 100%)",
+        WebkitMaskImage: "radial-gradient(ellipse at center, transparent 0%, transparent 58%, black 86%, black 100%)",
+      }}
+    />
+    <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_24px_oklch(0.35_0.03_60_/_0.18)]" />
     {projected.map(p => <MapMarker key={p.id} place={p} active={p.id === selectedId} onSelect={() => onSelect(p.id)} />)}
     {userLocation && <span className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2" style={{ left: size.width / 2 + worldX(userLocation.longitude, zoom) - centerWorld.x, top: size.height / 2 + worldY(userLocation.latitude, zoom) - centerWorld.y }}><span className="block h-4 w-4 rounded-full border-2 border-background bg-info shadow-md" /><span className="absolute inset-0 -z-10 m-auto h-8 w-8 animate-ping rounded-full bg-info/30" /></span>}
     <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-lg border border-border bg-card/90 shadow-md">
