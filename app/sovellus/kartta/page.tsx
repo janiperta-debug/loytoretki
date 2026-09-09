@@ -36,7 +36,7 @@ function worldY(lat: number, z: number) {
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** z * TILE
 }
 function lonFromWorld(x: number, z: number) { const s = 2 ** z * TILE; return ((((x % s) + s) % s) / s) * 360 - 180 }
-function latFromWorld(y: number, z: number) { const s = 2 ** z * TILE; return (360 / Math.PI) * Math.atan(Math.sinh((0.5 - y / s) * 2 * Math.PI)) }
+function latFromWorld(y: number, z: number) { const s = 2 ** z * TILE; return (180 / Math.PI) * Math.atan(Math.sinh((0.5 - y / s) * 2 * Math.PI)) }
 
 function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selectedId: string | null; onSelect: (id: string) => void }) {
   const ref = useRef<HTMLDivElement>(null)
