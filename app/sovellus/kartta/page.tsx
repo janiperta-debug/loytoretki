@@ -18,6 +18,8 @@ type Place = {
 
 type MapPlace = Place & { x: number; y: number; markerNumber: number }
 
+type Tile = { x: number; y: number; left: number; top: number }
+
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "kaikki", label: "Kaikki" },
   { key: "kirpputori", label: "Kirpputorit" },
@@ -27,6 +29,8 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const TILE_SIZE = 256
+const MAP_ZOOM = 13
 
 function matches(place: Place, filter: Filter) {
   if (filter === "kaikki") return true
@@ -69,6 +73,47 @@ function projectToMap(places: Place[]): MapPlace[] {
   }))
 }
 
+function lonToPixel(lon: number, zoom: number) {
+  return ((lon + 180) / 360) * 2 ** zoom * TILE_SIZE
+}
+
+function latToPixel(lat: number, zoom: number) {
+  const latRad = (lat * Math.PI) / 180
+  return (
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
+    2 ** zoom *
+    TILE_SIZE
+  )
+}
+
+function getMapCenter(places: Place[]) {
+  const located = places.filter((place) => place.latitude != null && place.longitude != null)
+  if (!located.length) return null
+
+  return {
+    latitude: located.reduce((sum, place) => sum + place.latitude!, 0) / located.length,
+    longitude: located.reduce((sum, place) => sum + place.longitude!, 0) / located.length,
+  }
+}
+
+function getTiles(center: { latitude: number; longitude: number }): Tile[] {
+  const centerX = lonToPixel(center.longitude, MAP_ZOOM)
+  const centerY = latToPixel(center.latitude, MAP_ZOOM)
+  const centerTileX = Math.floor(centerX / TILE_SIZE)
+  const centerTileY = Math.floor(centerY / TILE_SIZE)
+  const offsetX = centerX - centerTileX * TILE_SIZE
+  const offsetY = centerY - centerTileY * TILE_SIZE
+
+  return [-1, 0, 1].flatMap((dx) =>
+    [-1, 0, 1].map((dy) => ({
+      x: centerTileX + dx,
+      y: centerTileY + dy,
+      left: 50 - offsetX - TILE_SIZE / 2 + dx * TILE_SIZE,
+      top: 50 - offsetY - TILE_SIZE / 2 + dy * TILE_SIZE,
+    })),
+  )
+}
+
 export default function KarttaPage() {
   const [filter, setFilter] = useState<Filter>("kaikki")
   const [places, setPlaces] = useState<Place[]>([])
@@ -102,6 +147,8 @@ export default function KarttaPage() {
   const mapPlaces = useMemo(() => projectToMap(places), [places])
   const visible = mapPlaces.filter((place) => matches(place, filter))
   const selected = visible.find((place) => place.id === selectedId) ?? visible[0] ?? null
+  const mapCenter = useMemo(() => getMapCenter(places), [places])
+  const tiles = useMemo(() => (mapCenter ? getTiles(mapCenter) : []), [mapCenter])
 
   return (
     <div className="flex flex-col">
@@ -136,13 +183,32 @@ export default function KarttaPage() {
         ))}
       </div>
 
-      <div className="relative mx-4 flex-1 overflow-hidden rounded-2xl border border-border shadow-inner">
+      <div className="relative mx-4 flex-1 overflow-hidden rounded-2xl border border-border bg-[#e8e1d0] shadow-inner">
+        {mapCenter ? (
+          <div className="absolute inset-0 overflow-hidden bg-[#d8d0bd]" aria-label="OpenStreetMap-kartta">
+            {tiles.map((tile) => (
+              <img
+                key={`${tile.x}-${tile.y}`}
+                src={`https://tile.openstreetmap.org/${MAP_ZOOM}/${tile.x}/${tile.y}.png`}
+                alt=""
+                className="pointer-events-none absolute h-64 w-64 max-w-none"
+                style={{ left: `calc(50% + ${tile.left}px)`, top: `calc(50% + ${tile.top}px)` }}
+              />
+            ))}
+            <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.22)]" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-[oklch(0.9_0.03_80)]" />
+        )}
+
+        {/* Paper-map texture retained as a visual mask over the real map. */}
         <img
           src="/images/app/paper-map.png"
-          alt="Vanha karttakuva retkialueesta"
-          className="h-full min-h-[26rem] w-full object-cover"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-multiply"
         />
-        <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.12)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.10)]" />
 
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -183,6 +249,10 @@ export default function KarttaPage() {
         >
           <Navigation className="h-5 w-5" aria-hidden="true" />
         </button>
+
+        <span className="absolute bottom-1 left-2 rounded bg-background/75 px-1.5 py-0.5 text-[9px] text-foreground/70">
+          © OpenStreetMap contributors
+        </span>
       </div>
 
       <div className="px-4 pt-3">
