@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { ChevronRight, MapPin, Minus, Navigation, Plus, SlidersHorizontal } from "lucide-react"
-import { useUserLocation } from "@/components/app/use-user-location"
+import { useUserLocation, type UserLocation } from "@/components/app/use-user-location"
 
 type Filter = "kaikki" | "kirpputori" | "kierratys" | "muut"
 type Place = { id: string; name: string; category: string; address: string | null; city: string | null; latitude: number | null; longitude: number | null }
@@ -39,13 +39,22 @@ function worldY(lat: number, z: number) {
 function lonFromWorld(x: number, z: number) { const s = 2 ** z * TILE; return ((((x % s) + s) % s) / s) * 360 - 180 }
 function latFromWorld(y: number, z: number) { const s = 2 ** z * TILE; return (180 / Math.PI) * Math.atan(Math.sinh((0.5 - y / s) * 2 * Math.PI)) }
 
-function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selectedId: string | null; onSelect: (id: string) => void }) {
+function distanceKm(a: Point, b: Point) {
+  const toRad = (value: number) => value * Math.PI / 180
+  const dLat = toRad(b.latitude - a.latitude)
+  const dLon = toRad(b.longitude - a.longitude)
+  const lat1 = toRad(a.latitude)
+  const lat2 = toRad(b.latitude)
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+}
+
+function MapCanvas({ places, selectedId, onSelect, location, locationLoading, requestLocation }: { places: Place[]; selectedId: string | null; onSelect: (id: string) => void; location: UserLocation | null; locationLoading: boolean; requestLocation: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   const drag = useRef<{ x: number; y: number; cx: number; cy: number } | null>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [center, setCenter] = useState<Point>(INITIAL_CENTER)
   const [zoom, setZoom] = useState(INITIAL_ZOOM)
-  const { location, loading: locationLoading, requestLocation } = useUserLocation()
 
   useEffect(() => {
     if (!ref.current) return
@@ -127,6 +136,7 @@ export default function KarttaPage() {
   const [places, setPlaces] = useState<Place[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { location, loading: locationLoading, requestLocation } = useUserLocation()
 
   useEffect(() => {
     async function load() {
@@ -141,12 +151,19 @@ export default function KarttaPage() {
   }, [])
 
   const visible = places.filter(p => matches(p, filter))
-  const selected = visible.find(p => p.id === selectedId) ?? visible[0] ?? null
+  const gpsNearest = location
+    ? visible.filter(p => p.latitude != null && p.longitude != null).reduce<Place | null>((nearest, place) => {
+        if (!nearest) return place
+        return distanceKm(location, { latitude: place.latitude!, longitude: place.longitude! }) < distanceKm(location, { latitude: nearest.latitude!, longitude: nearest.longitude! }) ? place : nearest
+      }, null)
+    : null
+  const selected = visible.find(p => p.id === selectedId) ?? gpsNearest ?? visible[0] ?? null
+
   return <div className="flex flex-col">
     <header className="flex items-center justify-between px-4 pb-3 pt-6"><span className="w-9" /><h1 className="font-serif text-xl font-semibold uppercase tracking-[0.15em]">Retkikartta</h1><button type="button" className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card" aria-label="Kartan suodattimet"><SlidersHorizontal className="h-4 w-4" /></button></header>
     <div className="flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{FILTERS.map(f => <button key={f.key} type="button" onClick={() => setFilter(f.key)} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium ${filter === f.key ? "border-forest bg-forest text-forest-foreground" : "border-border bg-card"}`}>{f.label}</button>)}</div>
     <div className="relative mx-4 h-[26rem] overflow-hidden rounded-2xl border border-border bg-[#e8e2d2] shadow-inner" style={{ backgroundImage: "url('/images/app/paper-map.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
-      <MapCanvas places={visible} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
+      <MapCanvas places={visible} selectedId={selected?.id ?? null} onSelect={setSelectedId} location={location} locationLoading={locationLoading} requestLocation={requestLocation} />
       {loading && <div className="absolute inset-0 z-20 flex items-center justify-center bg-card/20"><span className="rounded-full border border-border bg-card/90 px-4 py-2 text-sm text-muted-foreground shadow-sm">Haetaan karttakohteita…</span></div>}
     </div>
     <div className="px-4 pt-3">{selected ? <SelectedCard place={selected} /> : <p className="rounded-xl border border-dashed border-border bg-card p-4 text-center text-sm text-muted-foreground">Ei kohteita tällä suodattimella. Valitse toinen luokka.</p>}</div>
