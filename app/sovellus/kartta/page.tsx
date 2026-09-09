@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { ChevronRight, MapPin, Minus, Navigation, Plus, SlidersHorizontal } from "lucide-react"
+import { useUserLocation } from "@/components/app/use-user-location"
 
 type Filter = "kaikki" | "kirpputori" | "kierratys" | "muut"
 type Place = { id: string; name: string; category: string; address: string | null; city: string | null; latitude: number | null; longitude: number | null }
@@ -44,7 +45,7 @@ function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selected
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [center, setCenter] = useState<Point>(INITIAL_CENTER)
   const [zoom, setZoom] = useState(INITIAL_ZOOM)
-  const [userLocation, setUserLocation] = useState<Point | null>(null)
+  const { location, loading: locationLoading, requestLocation } = useUserLocation()
 
   useEffect(() => {
     if (!ref.current) return
@@ -52,6 +53,12 @@ function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selected
     observer.observe(ref.current)
     return () => observer.disconnect()
   }, [])
+
+  useEffect(() => {
+    if (!location) return
+    setCenter({ latitude: location.latitude, longitude: location.longitude })
+    setZoom((current) => Math.max(current, 14))
+  }, [location])
 
   const centerWorld = useMemo(() => ({ x: worldX(center.longitude, zoom), y: worldY(center.latitude, zoom) }), [center, zoom])
   const projected = useMemo(() => places.filter(p => p.latitude != null && p.longitude != null).map((p, i) => {
@@ -87,12 +94,6 @@ function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selected
     const y = worldY(lat, z) - (fy - size.height / 2)
     setZoom(z); setCenter({ latitude: latFromWorld(y, z), longitude: lonFromWorld(x, z) })
   }
-  function locate() {
-    navigator.geolocation?.getCurrentPosition(p => {
-      const loc = { latitude: p.coords.latitude, longitude: p.coords.longitude }
-      setUserLocation(loc); setCenter(loc); setZoom(Math.max(zoom, 14))
-    }, () => {}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 })
-  }
 
   return <div ref={ref} className="absolute inset-5 cursor-grab touch-none overflow-hidden rounded-xl active:cursor-grabbing shadow-[0_2px_8px_oklch(0.3_0.03_60_/_0.18)]" role="application" aria-label="Siirrettävä OpenStreetMap-kartta"
     onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, cx: centerWorld.x, cy: centerWorld.y } }}
@@ -104,13 +105,13 @@ function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selected
       <div className="pointer-events-none absolute inset-0 bg-[oklch(0.9_0.03_80_/_0.18)]" />
     </div>
     {projected.map(p => <MapMarker key={p.id} place={p} active={p.id === selectedId} onSelect={() => onSelect(p.id)} />)}
-    {userLocation && <span className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2" style={{ left: size.width / 2 + worldX(userLocation.longitude, zoom) - centerWorld.x, top: size.height / 2 + worldY(userLocation.latitude, zoom) - centerWorld.y }}><span className="block h-4 w-4 rounded-full border-2 border-background bg-info shadow-md" /><span className="absolute inset-0 -z-10 m-auto h-8 w-8 animate-ping rounded-full bg-info/30" /></span>}
+    {location && <span className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2" style={{ left: size.width / 2 + worldX(location.longitude, zoom) - centerWorld.x, top: size.height / 2 + worldY(location.latitude, zoom) - centerWorld.y }}><span className="block h-4 w-4 rounded-full border-2 border-background bg-info shadow-md" /><span className="absolute inset-0 -z-10 m-auto h-8 w-8 animate-ping rounded-full bg-info/30" /></span>}
     <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-lg border border-border bg-card/90 shadow-md">
       <button type="button" onClick={e => { e.stopPropagation(); zoomAt(zoom + 1) }} className="flex h-11 w-11 items-center justify-center border-b border-border" aria-label="Lähennä karttaa"><Plus className="h-5 w-5" /></button>
       <button type="button" onClick={e => { e.stopPropagation(); zoomAt(zoom - 1) }} className="flex h-11 w-11 items-center justify-center" aria-label="Loitonna karttaa"><Minus className="h-5 w-5" /></button>
     </div>
     <span className="pointer-events-none absolute bottom-1 left-2 rounded bg-card/75 px-1.5 py-0.5 text-[9px] text-muted-foreground">© OpenStreetMap contributors</span>
-    <button type="button" onClick={e => { e.stopPropagation(); locate() }} className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-forest shadow-md active:scale-95" aria-label="Keskitä sijaintiisi"><Navigation className="h-5 w-5" /></button>
+    <button type="button" onClick={e => { e.stopPropagation(); requestLocation() }} disabled={locationLoading} className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-forest shadow-md active:scale-95 disabled:opacity-60" aria-label="Keskitä sijaintiisi"><Navigation className="h-5 w-5" /></button>
   </div>
 }
 
