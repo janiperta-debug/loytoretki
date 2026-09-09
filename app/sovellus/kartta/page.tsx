@@ -94,7 +94,7 @@ function MapCanvas({ places, selectedId, onSelect }: { places: Place[]; selected
     }, () => {}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 })
   }
 
-  return <div ref={ref} className="absolute inset-3 cursor-grab touch-none overflow-hidden rounded-xl active:cursor-grabbing shadow-[0_2px_8px_oklch(0.3_0.03_60_/_0.18)]" role="application" aria-label="Siirrettävä OpenStreetMap-kartta"
+  return <div ref={ref} className="absolute inset-5 cursor-grab touch-none overflow-hidden rounded-xl active:cursor-grabbing shadow-[0_2px_8px_oklch(0.3_0.03_60_/_0.18)]" role="application" aria-label="Siirrettävä OpenStreetMap-kartta"
     onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, cx: centerWorld.x, cy: centerWorld.y } }}
     onPointerMove={e => { if (drag.current) panTo(drag.current.cx - (e.clientX - drag.current.x), drag.current.cy - (e.clientY - drag.current.y)) }}
     onPointerUp={() => { drag.current = null }} onPointerCancel={() => { drag.current = null }}
