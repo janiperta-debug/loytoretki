@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 import { Search, X, MapPin, SlidersHorizontal, Bell, Compass } from "lucide-react"
 import { SCORE_META } from "@/lib/loytoretki-data"
 import { supabase } from "@/lib/supabase"
@@ -32,7 +31,6 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export default function HakuPage() {
-  const searchParams = useSearchParams()
   const [query, setQuery] = useState("")
   const [products, setProducts] = useState<Product[]>([])
   const [compassResults, setCompassResults] = useState<CompassResult[]>([])
@@ -44,9 +42,9 @@ export default function HakuPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const initialQuery = searchParams.get("q") ?? ""
+    const initialQuery = new URLSearchParams(window.location.search).get("q") ?? ""
     setQuery(initialQuery)
-  }, [searchParams])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
