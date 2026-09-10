@@ -21,7 +21,7 @@ export function Hero() {
       <div className="relative mx-auto w-full max-w-6xl px-5 pt-28 pb-20 sm:px-8 sm:pt-32">
         <div className="max-w-2xl">
           <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-brass/40 bg-[oklch(0.16_0.03_55_/_0.4)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-brass backdrop-blur-sm">
-            Löydä enemmän. Elä vähemmän.
+            Löydä enemmän. Etsi vähemmän.
           </span>
 
           <h1 className="text-balance font-serif text-5xl font-semibold leading-[0.98] text-background sm:text-6xl md:text-7xl">
