@@ -1,11 +1,66 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, MapPin, Bookmark, Bell, ChevronRight, Settings, Compass } from "lucide-react"
-import { PROFILE, getLocation, JOURNAL_ENTRIES, SCORE_META } from "@/lib/loytoretki-data"
-import { ScoreDot } from "@/components/app/compass-bits"
+import { PROFILE, JOURNAL_ENTRIES } from "@/lib/loytoretki-data"
+import { supabase } from "@/lib/supabase"
+
+
+type SavedPlace = {
+  id: string
+  place_id: string
+  place: {
+    id: string
+    name: string
+    category: string
+    city: string | null
+    description: string | null
+  } | null
+}
 
 export default function ProfiiliPage() {
-  const savedLocations = PROFILE.savedLocationIds.map((id) => getLocation(id)).filter(Boolean)
+  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([])
+  const [savedPlacesLoading, setSavedPlacesLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadSavedPlaces() {
+      const { data: userData } = await supabase.auth.getUser()
+
+      if (!userData.user) {
+        if (!cancelled) {
+          setSavedPlaces([])
+          setSavedPlacesLoading(false)
+        }
+        return
+      }
+
+      const { data, error } = await supabase
+        .from("saved_places")
+        .select("id, place_id, place:places(id, name, category, city, description)")
+        .eq("user_id", userData.user.id)
+        .order("created_at", { ascending: false })
+
+      if (!cancelled) {
+        if (error) {
+          setSavedPlaces([])
+        } else {
+          setSavedPlaces((data ?? []) as SavedPlace[])
+        }
+        setSavedPlacesLoading(false)
+      }
+    }
+
+    loadSavedPlaces()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const savedFinds = PROFILE.savedFindIds
     .map((id) => JOURNAL_ENTRIES.find((e) => e.id === id))
     .filter(Boolean)
@@ -71,30 +126,43 @@ export default function ProfiiliPage() {
         </Section>
 
         <Section title="Tallennetut kohteet" icon={<MapPin className="h-4 w-4 text-brass" aria-hidden />}>
-          <ul className="space-y-2">
-            {savedLocations.map((l) => (
-              <li key={l!.id}>
-                <Link
-                  href={`/sovellus/kohde/${l!.id}`}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-transform active:scale-[0.99]"
-                >
-                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg">
-                    <Image src={l!.image || "/placeholder.svg"} alt="" fill className="object-cover" sizes="48px" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-foreground">{l!.name}</p>
-                    <p className="inline-flex items-center gap-1.5 text-xs" style={{ color: SCORE_META[l!.score].token }}>
-                      <ScoreDot score={l!.score} className="h-1.5 w-1.5" />
-                      {SCORE_META[l!.score].label}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                    {l!.distanceKm.toLocaleString("fi-FI")} km
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {savedPlacesLoading ? (
+            <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
+              Ladataan tallennettuja kohteita…
+            </div>
+          ) : savedPlaces.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">
+              Et ole vielä tallentanut kohteita.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {savedPlaces.map((saved) => {
+                const place = saved.place
+                if (!place) return null
+
+                return (
+                  <li key={saved.id}>
+                    <Link
+                      href={`/sovellus/kohde/${place.id}`}
+                      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-transform active:scale-[0.99]"
+                    >
+                      <div className="relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-secondary">
+                        <Image src="/placeholder.svg" alt="" fill className="object-cover opacity-60" sizes="48px" />
+                        <MapPin className="relative h-5 w-5 text-brass" aria-hidden />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">{place.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {place.category}{place.city ? ` · ${place.city}` : ""}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </Section>
 
         <Section title="Tallennetut löydöt" icon={<Bookmark className="h-4 w-4 text-brass" aria-hidden />}>
