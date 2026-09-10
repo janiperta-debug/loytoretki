@@ -20,6 +20,12 @@ export const metadata: Metadata = {
   description:
     'Löytöretki auttaa löytämään paikkoja, joissa etsimäsi voisi olla — ja asioita, joita et vielä tiennyt etsiväsi. Digitaalinen kumppani todellisen maailman löytöretkille.',
   generator: 'v0.app',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'Löytöretki',
+    statusBarStyle: 'black-translucent',
+  },
   icons: {
     icon: [
       {
@@ -35,7 +41,7 @@ export const metadata: Metadata = {
         type: 'image/svg+xml',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: [{ url: '/app-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 }
 
