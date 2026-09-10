@@ -43,23 +43,28 @@ export default function LegalPage() {
         </section>
 
         <section>
-          <h2 className="font-serif text-lg font-semibold text-foreground">5. Sijainti</h2>
+          <h2 className="font-serif text-lg font-semibold text-foreground">5. Evästeet ja selaimen tallennustila</h2>
+          <p className="mt-2">Löytöretki käyttää välttämättömiä selaimen tallennusmenetelmiä esimerkiksi kirjautumisen ja tämän ilmoituksen muistamisen toimintaan. Palvelussa ei tällä hetkellä käytetä markkinointi- tai analytiikkaseurantaa.</p>
+        </section>
+
+        <section>
+          <h2 className="font-serif text-lg font-semibold text-foreground">6. Sijainti</h2>
           <p className="mt-2">Kartta voi pyytää laitteen sijaintia lähimpien kohteiden näyttämistä varten. Sijaintilupa annetaan laitteen omassa selaimessa. Löytöretken nykyinen karttakäyttö käyttää sijaintia paikallisesti eikä tallenna GPS-sijaintia käyttäjän profiiliin.</p>
         </section>
 
         <section>
-          <h2 className="font-serif text-lg font-semibold text-foreground">6. Paikka- ja karttatiedot</h2>
+          <h2 className="font-serif text-lg font-semibold text-foreground">7. Paikka- ja karttatiedot</h2>
           <p className="mt-2">Karttataustana käytetään OpenStreetMapia. Kohdetietojen ajantasaisuus voi vaihdella, joten aukioloajat, palvelut ja muut tiedot kannattaa varmistaa suoraan kohteesta.</p>
           <p className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">Kartta: © OpenStreetMap contributors <ExternalLink className="h-3 w-3" aria-hidden /></p>
         </section>
 
         <section>
-          <h2 className="font-serif text-lg font-semibold text-foreground">7. Käyttäjien vastuu</h2>
+          <h2 className="font-serif text-lg font-semibold text-foreground">8. Käyttäjien vastuu</h2>
           <p className="mt-2">Käyttäjä vastaa omista julkaisemistaan tiedoista. Älä julkaise toisen henkilön henkilötietoja, kuvia tai muuta sisältöä ilman asianmukaista oikeutta. Löytöretkeä ei tule käyttää lain tai muiden oikeuksien vastaiseen toimintaan.</p>
         </section>
 
         <section>
-          <h2 className="font-serif text-lg font-semibold text-foreground">8. Tiedon luotettavuus</h2>
+          <h2 className="font-serif text-lg font-semibold text-foreground">9. Tiedon luotettavuus</h2>
           <p className="mt-2">Löytöretken tiedot voivat olla puutteellisia tai vanhentuneita. Käyttäjähavainnot ovat havaintoja, eivät lupauksia tuotteen saatavuudesta. Erityisesti Kompassin tuloksia tulee käyttää suuntana oman harkinnan tukena.</p>
         </section>
 
