@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { Search, X, MapPin, SlidersHorizontal, Bell, ChevronRight, Compass } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { Search, X, MapPin, SlidersHorizontal, Bell, Compass } from "lucide-react"
 import { SCORE_META } from "@/lib/loytoretki-data"
+import { supabase } from "@/lib/supabase"
 
 type Product = {
   id: string
@@ -24,16 +26,45 @@ type CompassResult = {
   latest_observed_at: string
 }
 
+type User = { id: string }
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export default function HakuPage() {
+  const searchParams = useSearchParams()
   const [query, setQuery] = useState("")
   const [products, setProducts] = useState<Product[]>([])
   const [compassResults, setCompassResults] = useState<CompassResult[]>([])
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [compassLoading, setCompassLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const initialQuery = searchParams.get("q") ?? ""
+    setQuery(initialQuery)
+  }, [searchParams])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function initAuth() {
+      const { data } = await supabase.auth.getUser()
+      if (!cancelled) setUser(data.user ? { id: data.user.id } : null)
+    }
+
+    initAuth()
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!cancelled) setUser(session?.user ? { id: session.user.id } : null)
+    })
+    return () => {
+      cancelled = true
+      listener.subscription.unsubscribe()
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -121,6 +152,56 @@ export default function HakuPage() {
     }
   }, [matchedProduct])
 
+  async function saveSearch() {
+    const term = query.trim()
+    if (!term || !user || saving) return
+
+    setSaving(true)
+    setSaveMessage(null)
+
+    const { data: existing } = await supabase
+      .from("searches")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("name", term)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) {
+      setSaveMessage("Haku on jo tallennettu profiiliisi.")
+      setSaving(false)
+      return
+    }
+
+    const { data: search, error: searchError } = await supabase
+      .from("searches")
+      .insert({ user_id: user.id, name: term })
+      .select("id")
+      .single()
+
+    if (searchError || !search) {
+      setSaveMessage("Hakua ei voitu tallentaa. Yritä uudelleen.")
+      setSaving(false)
+      return
+    }
+
+    const { error: termError } = await supabase.from("search_terms").insert({
+      search_id: search.id,
+      term,
+      source: "product",
+      weight: 1,
+    })
+
+    if (termError) {
+      await supabase.from("searches").delete().eq("id", search.id).eq("user_id", user.id)
+      setSaveMessage("Hakua ei voitu tallentaa. Yritä uudelleen.")
+    } else {
+      setSaveMessage("Haku tallennettu profiiliisi.")
+    }
+
+    setSaving(false)
+  }
+
   const resultCount = matchedProduct ? compassResults.length : 0
 
   return (
@@ -134,7 +215,7 @@ export default function HakuPage() {
           <Search className="h-5 w-5 shrink-0 text-brass" aria-hidden />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setSaveMessage(null) }}
             placeholder="Mitä etsit?"
             aria-label="Hakusana"
             className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
@@ -144,7 +225,7 @@ export default function HakuPage() {
           </span>
           {query && (
             <button
-              onClick={() => setQuery("")}
+              onClick={() => { setQuery(""); setSaveMessage(null) }}
               aria-label="Tyhjennä haku"
               className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:text-foreground"
             >
@@ -204,7 +285,7 @@ export default function HakuPage() {
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground">{meta.blurb}</p>
                       <p className="mt-2 text-xs text-muted-foreground">
-                        {result.observations_count} havainto{result.observations_count === 1 ? "" : "a"} · määrä {result.total_quantity}
+                        {result.observations_count} havainto{result.observations_count === 1 ? "" : "a"}
                       </p>
                     </Link>
                   )
@@ -238,10 +319,24 @@ export default function HakuPage() {
           </section>
         )}
 
-        <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground shadow-sm transition-transform active:scale-[0.99]">
-          <Bell className="h-4 w-4 text-brass" aria-hidden />
-          Tallenna haku
-        </button>
+        {!user ? (
+          <Link href="/sovellus/kirjaudu" className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground shadow-sm transition-transform active:scale-[0.99]">
+            <Bell className="h-4 w-4 text-brass" aria-hidden />
+            Kirjaudu tallentaaksesi haun
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={saveSearch}
+            disabled={!query.trim() || saving}
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground shadow-sm transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Bell className="h-4 w-4 text-brass" aria-hidden />
+            {saving ? "Tallennetaan…" : "Tallenna haku"}
+          </button>
+        )}
+
+        {saveMessage && <p className="mt-2 text-center text-xs text-muted-foreground">{saveMessage}</p>}
       </div>
     </div>
   )
@@ -249,7 +344,7 @@ export default function HakuPage() {
 
 function FilterChip({ icon, label }: { icon?: React.ReactNode; label: string }) {
   return (
-    <button className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground shadow-sm transition-transform active:scale-95">
+    <button type="button" className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground shadow-sm transition-transform active:scale-95">
       {icon && <span className="text-brass">{icon}</span>}
       {label}
     </button>
