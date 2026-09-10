@@ -2,13 +2,14 @@
 
 import { FormEvent, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Mail, Lock, Compass } from "lucide-react"
+import { ArrowLeft, Mail, Lock, Compass, User } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 
 export default function KirjauduPage() {
   const router = useRouter()
   const [mode, setMode] = useState<"login" | "signup">("login")
+  const [displayName, setDisplayName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -23,19 +24,31 @@ export default function KirjauduPage() {
 
     const result = mode === "login"
       ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password })
+      : await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { display_name: displayName.trim() || undefined },
+            emailRedirectTo: `${window.location.origin}/sovellus/profiili`,
+          },
+        })
 
     setLoading(false)
 
     if (result.error) {
-      setError(result.error.message === "Invalid login credentials"
-        ? "Sähköposti tai salasana ei täsmää."
-        : result.error.message)
+      const message = result.error.message
+      if (message === "Invalid login credentials") {
+        setError("Sähköposti tai salasana ei täsmää.")
+      } else if (message.toLowerCase().includes("email not confirmed")) {
+        setError("Sähköpostiosoitetta ei ole vielä vahvistettu. Tarkista sähköpostisi.")
+      } else {
+        setError(message)
+      }
       return
     }
 
     if (mode === "signup" && !result.data.session) {
-      setMessage("Tili on luotu. Tarkista sähköpostisi ja vahvista osoitteesi ennen kirjautumista.")
+      setMessage("Tili on luotu. Tarkista sähköpostisi ja vahvista osoitteesi. Vahvistuksen jälkeen voit kirjautua sisään.")
       return
     }
 
@@ -58,6 +71,12 @@ export default function KirjauduPage() {
       setLoading(false)
       setError(oauthError.message)
     }
+  }
+
+  function switchMode() {
+    setMode(mode === "login" ? "signup" : "login")
+    setError(null)
+    setMessage(null)
   }
 
   return (
@@ -91,23 +110,34 @@ export default function KirjauduPage() {
             <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" /><span>tai sähköpostilla</span><span className="h-px flex-1 bg-border" /></div>
 
             <form onSubmit={handleEmailSubmit} className="space-y-3">
+              {mode === "signup" && (
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium text-foreground">Nimi</span>
+                  <span className="relative block"><User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><input type="text" autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} className="w-full rounded-xl border border-border bg-background py-3 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-forest/20" placeholder="Oma nimi" /></span>
+                </label>
+              )}
+
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground">Sähköposti</span>
                 <span className="relative block"><Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="w-full rounded-xl border border-border bg-background py-3 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-forest/20" placeholder="sinä@example.com" /></span>
               </label>
+
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground">Salasana</span>
                 <span className="relative block"><Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><input type="password" required minLength={6} autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-border bg-background py-3 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-forest/20" placeholder="Vähintään 6 merkkiä" /></span>
               </label>
+
               {error && <p className="rounded-xl bg-clay/10 px-3 py-2.5 text-sm text-clay">{error}</p>}
               {message && <p className="rounded-xl bg-secondary px-3 py-2.5 text-sm text-foreground">{message}</p>}
+
               <button type="submit" disabled={loading} className="w-full rounded-xl bg-forest px-4 py-3.5 font-semibold text-forest-foreground shadow-sm transition-transform active:scale-[0.99] disabled:opacity-60">{loading ? "Hetki…" : mode === "login" ? "Kirjaudu sisään" : "Luo tili"}</button>
             </form>
 
-            <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); setMessage(null) }} className="mt-5 w-full text-center text-sm font-medium text-brass">
+            <button type="button" onClick={switchMode} className="mt-5 w-full text-center text-sm font-medium text-brass">
               {mode === "login" ? "Ei vielä tiliä? Luo tili" : "Onko sinulla jo tili? Kirjaudu sisään"}
             </button>
           </div>
+
           <p className="mt-5 text-center text-xs leading-5 text-muted-foreground">Löytöretkeä voi käyttää myös ilman tiliä. Tili tarvitaan omien tallennusten ja muiden henkilökohtaisten tietojen säilyttämiseen.</p>
         </div>
       </div>
