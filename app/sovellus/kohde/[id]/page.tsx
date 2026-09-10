@@ -6,6 +6,7 @@ import Image from "next/image"
 import { notFound } from "next/navigation"
 import { ChevronLeft, Share2, Heart, MapPin, Clock, Navigation, ChevronRight } from "lucide-react"
 import { CATEGORY_LABELS } from "@/lib/loytoretki-data"
+import { supabase } from "@/lib/supabase"
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -44,6 +45,8 @@ export default function KohdePage({ params }: { params: Promise<{ id: string }> 
   const [error, setError] = useState(false)
   const [tab, setTab] = useState<(typeof TABS)[number]>("Yleiskatsaus")
   const [saved, setSaved] = useState(false)
+  const [saveLoading, setSaveLoading] = useState(true)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -101,6 +104,82 @@ export default function KohdePage({ params }: { params: Promise<{ id: string }> 
     }
   }, [id])
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadSavedState() {
+      setSaveLoading(true)
+      setSaveMessage(null)
+
+      const { data: userData } = await supabase.auth.getUser()
+      if (cancelled) return
+
+      if (!userData.user) {
+        setSaved(false)
+        setSaveLoading(false)
+        return
+      }
+
+      const { data, error: savedError } = await supabase
+        .from("saved_places")
+        .select("id")
+        .eq("user_id", userData.user.id)
+        .eq("place_id", id)
+        .maybeSingle()
+
+      if (!cancelled) {
+        setSaved(Boolean(data) && !savedError)
+        setSaveLoading(false)
+      }
+    }
+
+    loadSavedState()
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  async function toggleSaved() {
+    setSaveMessage(null)
+
+    const { data: userData } = await supabase.auth.getUser()
+    const user = userData.user
+
+    if (!user) {
+      setSaveMessage("Kirjaudu sisään, niin voit tallentaa kohteita omalle Löytöretkellesi.")
+      return
+    }
+
+    setSaveLoading(true)
+
+    if (saved) {
+      const { error: deleteError } = await supabase
+        .from("saved_places")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("place_id", id)
+
+      if (deleteError) {
+        setSaveMessage("Kohteen tallennusta ei voitu muuttaa juuri nyt.")
+      } else {
+        setSaved(false)
+      }
+    } else {
+      const { error: insertError } = await supabase.from("saved_places").insert({
+        user_id: user.id,
+        place_id: id,
+      })
+
+      if (insertError) {
+        setSaveMessage("Kohteen tallennusta ei voitu muuttaa juuri nyt.")
+      } else {
+        setSaved(true)
+      }
+    }
+
+    setSaveLoading(false)
+  }
+
   if (!loading && (error || !place)) notFound()
 
   return (
@@ -125,10 +204,11 @@ export default function KohdePage({ params }: { params: Promise<{ id: string }> 
               <Share2 className="h-5 w-5" />
             </button>
             <button
-              onClick={() => setSaved((s) => !s)}
+              onClick={toggleSaved}
+              disabled={saveLoading}
               aria-label={saved ? "Poista tallennus" : "Tallenna kohde"}
               aria-pressed={saved}
-              className="grid h-10 w-10 place-items-center rounded-full bg-background/85 shadow-md backdrop-blur transition-transform active:scale-95"
+              className="grid h-10 w-10 place-items-center rounded-full bg-background/85 shadow-md backdrop-blur transition-transform active:scale-95 disabled:opacity-60"
             >
               <Heart className={`h-5 w-5 ${saved ? "fill-clay text-clay" : "text-foreground"}`} />
             </button>
@@ -166,6 +246,11 @@ export default function KohdePage({ params }: { params: Promise<{ id: string }> 
             </>
           )}
         </div>
+        {saveMessage && (
+          <div className="mt-2 rounded-xl border border-brass/30 bg-brass/10 px-4 py-3 text-sm text-foreground">
+            {saveMessage}
+          </div>
+        )}
       </div>
 
       <div className="mt-4 px-4">
