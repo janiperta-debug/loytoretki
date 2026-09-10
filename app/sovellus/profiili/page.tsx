@@ -10,6 +10,11 @@ type SavedPlace = {
   place_id: string
   place: { id: string; name: string; category: string; city: string | null; description: string | null } | null
 }
+type SavedSearch = {
+  id: string
+  name: string
+  created_at: string
+}
 type UserProfile = { display_name: string | null; username: string | null; avatar_url: string | null }
 type JournalEntry = { id: string; title: string | null; text: string; entry_date: string; place_id: string | null; place: { id: string; name: string; city: string | null } | null }
 type Place = { id: string; name: string; city: string | null }
@@ -18,6 +23,7 @@ export default function ProfiiliPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([])
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [places, setPlaces] = useState<Place[]>([])
   const [observationsCount, setObservationsCount] = useState(0)
@@ -31,18 +37,20 @@ export default function ProfiiliPage() {
 
   async function load(currentUser: any) {
     if (!currentUser) {
-      setUser(null); setProfile(null); setSavedPlaces([]); setJournalEntries([]); setObservationsCount(0); setLoading(false); return
+      setUser(null); setProfile(null); setSavedPlaces([]); setSavedSearches([]); setJournalEntries([]); setObservationsCount(0); setLoading(false); return
     }
     setUser(currentUser)
-    const [profileResult, savedResult, observationsResult, journalResult, placesResult] = await Promise.all([
+    const [profileResult, savedResult, searchesResult, observationsResult, journalResult, placesResult] = await Promise.all([
       supabase.from("profiles").select("display_name, username, avatar_url").eq("id", currentUser.id).maybeSingle(),
       supabase.from("saved_places").select("id, place_id, place:places(id, name, category, city, description)").eq("user_id", currentUser.id).order("created_at", { ascending: false }),
+      supabase.from("searches").select("id, name, created_at").eq("user_id", currentUser.id).order("created_at", { ascending: false }),
       supabase.from("observations").select("id", { count: "exact", head: true }).eq("user_id", currentUser.id),
       supabase.from("journal_entries").select("id, title, text, entry_date, place_id, place:places(id, name, city)").eq("user_id", currentUser.id).order("entry_date", { ascending: false }).order("created_at", { ascending: false }),
       supabase.from("places").select("id, name, city").order("name", { ascending: true }),
     ])
     setProfile(profileResult.data ?? null)
     setSavedPlaces(savedResult.error ? [] : ((savedResult.data ?? []) as SavedPlace[]))
+    setSavedSearches(searchesResult.error ? [] : ((searchesResult.data ?? []) as SavedSearch[]))
     setObservationsCount(observationsResult.count ?? 0)
     setJournalEntries(journalResult.error ? [] : ((journalResult.data ?? []) as JournalEntry[]))
     setPlaces(placesResult.data ?? [])
@@ -99,7 +107,24 @@ export default function ProfiiliPage() {
       </header>
 
       <div className="space-y-6 px-5 py-6">
-        <Section title="Tallennetut haut" icon={<Search className="h-4 w-4 text-brass" />}><div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">Et ole vielä tallentanut hakuja.</div></Section>
+        <Section title="Tallennetut haut" icon={<Search className="h-4 w-4 text-brass" />}>
+          {savedSearches.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">Et ole vielä tallentanut hakuja.</div>
+          ) : (
+            <ul className="space-y-2">
+              {savedSearches.map((search) => (
+                <li key={search.id}>
+                  <Link href={`/sovellus/haku?q=${encodeURIComponent(search.name)}`} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm active:scale-[0.99]">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-secondary"><Search className="h-5 w-5 text-brass" /></div>
+                    <div className="min-w-0 flex-1"><p className="truncate font-medium text-foreground">{search.name}</p><p className="text-xs text-muted-foreground">Avaa haku uudelleen</p></div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
         <Section title="Tallennetut kohteet" icon={<MapPin className="h-4 w-4 text-brass" />}>
           {savedPlaces.length === 0 ? <div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">Et ole vielä tallentanut kohteita.</div> : <ul className="space-y-2">{savedPlaces.map((saved) => { const place = saved.place; if (!place) return null; return <li key={saved.id}><Link href={`/sovellus/kohde/${place.id}`} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm active:scale-[0.99]"><div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-secondary"><MapPin className="h-5 w-5 text-brass" /></div><div className="min-w-0 flex-1"><p className="truncate font-medium text-foreground">{place.name}</p><p className="text-xs text-muted-foreground">{place.category}{place.city ? ` · ${place.city}` : ""}</p></div><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" /></Link></li> })}</ul>}
         </Section>
@@ -114,7 +139,12 @@ export default function ProfiiliPage() {
 
         <Section title="Tallennetut haut ja löydöt" icon={<Bookmark className="h-4 w-4 text-brass" />}><div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">Muut henkilökohtaiset tallennukset tulevat tähän myöhemmin.</div></Section>
 
-        <Section title="Asetukset" icon={<LogOut className="h-4 w-4 text-brass" />}><div className="rounded-xl border border-border bg-card p-4 shadow-sm"><button type="button" onClick={logout} className="flex w-full items-center gap-3 text-left text-sm font-medium text-foreground"><LogOut className="h-4 w-4 text-brass" />Kirjaudu ulos</button></div></Section>
+        <Section title="Asetukset" icon={<LogOut className="h-4 w-4 text-brass" />}>
+          <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
+            <Link href="/sovellus/legal" className="flex items-center justify-between text-sm font-medium text-foreground"><span>Tietosuoja ja käyttöehdot</span><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>
+            <button type="button" onClick={logout} className="flex w-full items-center gap-3 border-t border-border pt-3 text-left text-sm font-medium text-foreground"><LogOut className="h-4 w-4 text-brass" />Kirjaudu ulos</button>
+          </div>
+        </Section>
       </div>
     </div>
   )
