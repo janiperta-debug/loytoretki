@@ -15,7 +15,6 @@ const query = `
   nwr["shop"="antiques"](${OSM_BBOX});
   nwr["shop"="charity"](${OSM_BBOX});
   nwr["shop"="auction"](${OSM_BBOX});
-  nwr["amenity"="recycling"](${OSM_BBOX});
 );
 out center tags;
 `
@@ -29,7 +28,6 @@ const headers = {
 function categoryFor(tags) {
   if (tags.shop === "antiques") return "antiikki"
   if (tags.shop === "auction") return "huutokauppa"
-  if (tags.amenity === "recycling") return "kierratys"
   return "kirpputori"
 }
 
