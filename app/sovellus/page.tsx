@@ -1,6 +1,7 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 import { ChevronRight, Store, Recycle, Gavel, Landmark, Plus, NotebookPen } from "lucide-react"
+import { CompassMark } from "@/components/compass-mark"
 import { NearbyPlaces } from "@/components/app/nearby-places"
 import { ObservationForm } from "@/components/app/observation-form"
 import { SOURCE_TYPES } from "@/lib/loytoretki-data"
@@ -10,7 +11,7 @@ export default function KotiPage() {
     <div>
       <HeroHeader />
       <section className="space-y-4 px-4 py-6">
-        <InfoCard title="Kompassin periaatteet" icon={<img src="/images/loytoretki-logo.png" alt="" className="h-5 w-auto object-contain mix-blend-multiply" aria-hidden />}>
+        <InfoCard title="Kompassin periaatteet" icon={<CompassMark className="h-5 w-5 text-brass" aria-hidden />}>
           <p className="font-medium text-foreground">Ohjaa, ei lupaa.</p>
           <ul className="mt-2 space-y-1.5"><li className="flex gap-2"><span className="text-brass">✦</span>Tieto elää — paikka, tuote ja tilanne voivat muuttua.</li><li className="flex gap-2"><span className="text-brass">✦</span>Yhteisön havainnot tekevät kompassista tarkemman.</li><li className="flex gap-2"><span className="text-brass">✦</span>Löytöretki on apurisi, ei takauksesi.</li></ul>
         </InfoCard>
@@ -30,7 +31,7 @@ export default function KotiPage() {
 }
 
 function HeroHeader() {
-  return <header className="relative overflow-hidden"><img src="/images/journey-scene.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-b from-[oklch(0.2_0.02_60_/_0.72)] via-[oklch(0.2_0.02_60_/_0.62)] to-[oklch(0.16_0.02_60_/_0.9)]" /><div className="relative px-5 pb-8 pt-10"><img src="/images/loytoretki-logo.png" alt="Löytöretki" className="h-auto w-full max-w-[25rem] object-contain object-left mix-blend-lighten drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]" /><p className="mt-5 max-w-[15rem] text-pretty font-serif text-xl leading-snug text-[oklch(0.94_0.02_88)]">Apuri löytämiseen. Se näyttää suunnan, ei lupaa.</p></div></header>
+  return <header className="relative overflow-hidden"><img src="/images/journey-scene.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-b from-[oklch(0.2_0.02_60_/_0.72)] via-[oklch(0.2_0.02_60_/_0.62)] to-[oklch(0.16_0.02_60_/_0.9)]" /><div className="relative px-5 pb-8 pt-10"><img src="/images/loytoretki-logo.png" alt="Löytöretki" className="h-auto w-full max-w-[25rem] object-contain object-left mix-blend-darken drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]" /><p className="mt-5 max-w-[15rem] text-pretty font-serif text-xl leading-snug text-[oklch(0.94_0.02_88)]">Apuri löytämiseen. Se näyttää suunnan, ei lupaa.</p></div></header>
 }
 
 function InfoCard({ title, icon, children, action }: { title: string; icon: ReactNode; children: ReactNode; action?: string }) {
