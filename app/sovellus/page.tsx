@@ -19,7 +19,7 @@ export default function KotiPage() {
         <ObservationForm />
         <Link href="/sovellus/paivakirja" className="block">
           <InfoCard title="Retkeilijän loki" icon={<NotebookPen className="h-5 w-5 text-brass" aria-hidden />} action="Avaa loki">
-            <p>Katso retkeilijöiden tarinoita ja löytöjä. Lokin lukeminen onnistuu ilman tiliä; oman merkinnän voi julkaista kirjautuneena.</p>
+            <p>Katso retkeilijöiden tarinoita ja löytöjä. Jaa myös omat löytösi muiden retkeilijöiden kanssa.</p>
           </InfoCard>
         </Link>
         <InfoCard title="Mukana useita lähteitä" icon={<Store className="h-5 w-5 text-brass" aria-hidden />}>
