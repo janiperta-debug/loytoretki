@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react"
 import Link from "next/link"
-import { Search, MapPin, Bookmark, ChevronRight, Compass, LogIn, LogOut, NotebookPen, Plus, X } from "lucide-react"
+import { Search, MapPin, ChevronRight, Compass, LogIn, LogOut, NotebookPen, Plus, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 type SavedPlace = {
@@ -10,11 +10,7 @@ type SavedPlace = {
   place_id: string
   place: { id: string; name: string; category: string; city: string | null; description: string | null } | null
 }
-type SavedSearch = {
-  id: string
-  name: string
-  created_at: string
-}
+type SavedSearch = { id: string; name: string; created_at: string }
 type UserProfile = { display_name: string | null; username: string | null; avatar_url: string | null }
 type JournalEntry = { id: string; title: string | null; text: string; entry_date: string; place_id: string | null; place: { id: string; name: string; city: string | null } | null }
 type Place = { id: string; name: string; city: string | null }
@@ -91,7 +87,10 @@ export default function ProfiiliPage() {
         <div className="relative flex items-center gap-4"><div className="grid h-16 w-16 shrink-0 place-items-center rounded-full border-2 border-brass/50 bg-background/10"><Compass className="h-8 w-8 text-brass" strokeWidth={1.6} /></div><div className="min-w-0"><h1 className="font-serif text-2xl font-semibold">Oma Löytöretkesi</h1><p className="text-sm text-forest-foreground/80">Kirjaudu sisään tai luo tili</p><p className="mt-0.5 text-xs text-forest-foreground/70">Löytöretkeä voi käyttää myös ilman tiliä</p></div></div>
         <Link href="/sovellus/kirjaudu" className="relative mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-background px-4 py-3.5 font-semibold text-forest shadow-sm"><LogIn className="h-5 w-5" />Kirjaudu / Luo tili</Link>
       </header>
-      <div className="space-y-6 px-5 py-6"><Section title="Oma päiväkirja" icon={<NotebookPen className="h-4 w-4 text-brass" />}><div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">Kirjaudu sisään, niin voit säilyttää omat retkesi ja merkintäsi profiilissasi.</div></Section></div>
+      <div className="space-y-6 px-5 py-6">
+        <Section title="Oma päiväkirja" icon={<NotebookPen className="h-4 w-4 text-brass" />}><div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">Kirjaudu sisään, niin voit säilyttää omat retkesi ja merkintäsi profiilissasi.</div></Section>
+        <Link href="/sovellus/legal" className="flex items-center justify-between rounded-xl border border-border bg-card p-4 text-sm font-medium shadow-sm"><span>Tietosuoja ja käyttöehdot</span><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>
+      </div>
     </div>
   )
 
@@ -136,8 +135,6 @@ export default function ProfiiliPage() {
             {journalEntries.length === 0 ? <div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">Oma päiväkirjasi on vielä tyhjä.</div> : <ol className="space-y-3">{journalEntries.map((entry) => <li key={entry.id} className="rounded-xl border border-border bg-card p-4 shadow-sm"><div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>{formatDate(entry.entry_date)}</span>{entry.place && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-brass" />{entry.place.name}</span>}</div><h3 className="mt-2 font-serif text-lg font-semibold text-foreground">{entry.title || "Päiväkirjamerkintä"}</h3><p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-foreground/90">{entry.text}</p></li>)}</ol>}
           </div>
         </Section>
-
-        <Section title="Tallennetut haut ja löydöt" icon={<Bookmark className="h-4 w-4 text-brass" />}><div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">Muut henkilökohtaiset tallennukset tulevat tähän myöhemmin.</div></Section>
 
         <Section title="Asetukset" icon={<LogOut className="h-4 w-4 text-brass" />}>
           <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
