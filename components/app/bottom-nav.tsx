@@ -7,7 +7,7 @@ import { Home, Map, NotebookPen, User, Search } from "lucide-react"
 const items = [
   { href: "/sovellus", label: "Koti", icon: Home, exact: true },
   { href: "/sovellus/kartta", label: "Kartta", icon: Map },
-  { href: "/sovellus/paivakirja", label: "Päiväkirja", icon: NotebookPen },
+  { href: "/sovellus/paivakirja", label: "Loki", icon: NotebookPen },
   { href: "/sovellus/profiili", label: "Profiili", icon: User },
 ] as const
 
